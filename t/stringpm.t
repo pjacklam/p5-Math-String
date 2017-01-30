@@ -9,7 +9,7 @@ BEGIN
   chdir 't' if -d 't';
   unshift @INC, '../blib/arch';
   unshift @INC, '../lib';			# to run manually
-  plan tests => 204;
+  plan tests => 266;
   }
 
 use Math::String;
@@ -132,7 +132,22 @@ ok (--$x,'baz');
 ok (--$x,'bar');
 ok (--$x,'foo');
 ok (--$x,'');
-ok (--$x,'foo');	# negative
+ok (--$x,'foo');		# -1, negative
+ok (--$x,'bar');		# -2, negative
+ok (--$x,'baz');		# -3, negative
+ok (--$x,'foo foo');		# -4, negative
+ok (--$x,'foo bar');		# -5, negative
+ok (--$x,'foo baz');		# -6, negative
+ok (--$x,'bar foo');		# -7, negative
+ok (--$x,'bar bar');		# -8, negative
+ok (--$x,'bar baz');		# -9, negative
+ok (--$x,'baz foo');		# -10, negative
+ok (--$x,'baz bar');		# -11, negative
+ok (--$x,'baz baz');		# -12, negative
+ok (--$x,'foo foo foo');	# -13, negative
+ok (--$x,'foo foo bar');	# -14, negative
+ok (--$x,'foo foo baz');	# -15, negative
+ok (--$x,'foo bar foo');	# -16, negative
 
 # for minlen
 $x = Math::String->new('', Math::String::Charset->new( { 
@@ -143,7 +158,65 @@ $x = Math::String->new('aa', Math::String::Charset->new( {
   start => ['a', 'b', 'c' ], minlen => 2, } ));
 ok ($x,'aa');		# smallest possible
 ok_undef (--$x,'hm2'); 
- 
+
+##############################################################################
+# extended tests for inc/dec with sep chars
+
+$x = Math::String->new('', Math::String::Charset->new( { 
+  start => ['foo', 'bar', 'baz', 'bon', 'bom' ], sep => ' ' } ));
+ok ($x,''); 
+ok (++$x,'foo');
+ok (++$x,'bar');
+ok (++$x,'baz');
+ok (++$x,'bon');
+ok (++$x,'bom');
+ok (++$x,'foo foo');
+ok (++$x,'foo bar');
+ok (++$x,'foo baz');
+ok (++$x,'foo bon');
+ok (++$x,'foo bom');
+ok (++$x,'bar foo');
+ok (++$x,'bar bar');
+
+ok (--$x,'bar foo');
+ok (--$x,'foo bom');
+ok (--$x,'foo bon');
+ok (--$x,'foo baz');
+ok (--$x,'foo bar');
+ok (--$x,'foo foo');
+ok (--$x,'bom');
+ok (--$x,'bon');
+ok (--$x,'baz');
+ok (--$x,'bar');
+ok (--$x,'foo');
+ok (--$x,'');			# 0
+
+ok (--$x,'foo');
+ok (--$x,'bar');
+ok (--$x,'baz');
+ok (--$x,'bon');
+ok (--$x,'bom');
+ok (--$x,'foo foo');
+ok (--$x,'foo bar');
+ok (--$x,'foo baz');
+ok (--$x,'foo bon');
+ok (--$x,'foo bom');
+ok (--$x,'bar foo');
+ok (--$x,'bar bar');
+
+# next() for negative strings:
+
+ok (++$x,'bar foo');
+ok (++$x,'foo bom');
+ok (++$x,'foo bon');
+ok (++$x,'foo baz');
+ok (++$x,'foo bar');
+ok (++$x,'foo foo');
+ok (++$x,'bom');
+ok (++$x,'bon');
+ok (++$x,'baz');
+ok (++$x,'bar');
+
 ##############################################################################
 # check wether bior(),bxor(), band() word
 $x = Math::String->new("a");

@@ -1,12 +1,12 @@
 #############################################################################
 # Math/String/Charset.pm -- package which defines a charset for Math/String
 #
-# Copyright (C) 1999-2003 by Tels. All rights reserved.
+# Copyright (C) 1999-2004 by Tels. All rights reserved.
 #############################################################################
 
 package Math::String::Charset;
 use base Exporter;
-@EXPORT_OK = qw/SIMPLE analyze/;
+@EXPORT_OK = qw/analyze/;
 
 BEGIN
   {
@@ -14,16 +14,14 @@ BEGIN
   }
 
 use vars qw($VERSION);
-$VERSION = '1.13';	# Current version of this package
+$VERSION = '1.16';	# Current version of this package
 require  5.005;		# requires this Perl version or later
 
 use strict;
-use Math::BigInt lib => 'GMP';	# prefer GMP
+use Math::BigInt;
 
-use vars qw/$die_on_error/; 
+use vars qw/$die_on_error $CALC/;
 $die_on_error = 1;		# set to 0 to not die
-
-use constant SIMPLE => 1;
 
 use Math::String::Charset::Nested;
 use Math::String::Charset::Grouped;
@@ -49,27 +47,24 @@ use Math::String::Charset::Grouped;
 # _sep  : separator string (undef for none)
 # _map  : mapping character to number
 
-# higher orders (not used here):
-# _sets : list of charsets for the different positions
-# _bi   : hash with refs to array of bi-grams
-# _bmap : hash with refs to hash of bi-grams
-# _scnt : array of hashes, count of strings starting with this character
-# _sm	: hash w/ mapping of start characters for faster lookup
+# See the other Charset package files for the keys the higher-order charsets use.
 
-# wordlist (not used here):
-# _order    : = 1
-# _type     : = 3
-# _file     : dictionary file
-# _list     : tied object
-# _stages   : stages (1,2,3)
-# _mutations: mutations (1..1023) 
+my $ONE = Math::BigInt->bone();
+
+BEGIN
+  {
+  $CALC = Math::BigInt->config()->{lib} || 'Math::BigInt::Calc';
+  }
+
+#############################################################################
 
 sub new
   {
   my $class = shift;
   $class = ref($class) || $class || __PACKAGE__;
-  my $self = {};
-  bless $self, $class;
+
+  my $self = bless {}, $class;
+
   my $value;
   if (!ref($_[0]))
     {
@@ -102,9 +97,12 @@ sub new
       }
     return $self; 
     }
+
   # convert ARRAY ref into HASH ref in the same go
   $value = $self->_check_params($value);	
+
 #  print "new $class type $self->{_type} order $self->{_order} $self->{_error}\n";
+
   if ($self->{_error} eq '')
     {
     # now route request for initialization to subclasses if we are in baseclass
@@ -201,13 +199,16 @@ sub _check_params
    "Illegal combination of type '$self->{_type}' and order '$self->{_order}'"
     if (($self->{_type} == 1) && ($self->{_order} != 1));
 
-  return $self->{_error} =
-   "Illegal combination of order '$self->{_order}' and 'end'"
-    if (($self->{_order} == 1) && (defined $value->{end}));
+  if ($self->{_order} == 1)
+    {
+    return $self->{_error} =
+     "Illegal combination of order '$self->{_order}' and 'end'"
+      if defined $value->{end};
   
-  return $self->{_error} =
-   "Illegal combination of order '$self->{_order}' and 'bi'"
-    if (($self->{_order} == 1) && (defined $value->{bi}));
+    return $self->{_error} =
+     "Illegal combination of order '$self->{_order}' and 'bi'"
+      if defined $value->{bi};
+    }
 
   return $self->{_error} = "Illegal order '$self->{_order}'"
    if (($self->{_order} < 1) || ($self->{_order} > 2)); 
@@ -239,7 +240,9 @@ sub _initialize
    if !defined $self->{_sep};
   
   $self->{_ones} = $self->{_start};
-  foreach (@{$self->{_start}}) { $self->{_end}->{$_} = 1; }
+
+# XXX TODO: remove
+#  foreach (@{$self->{_start}}) { $self->{_end}->{$_} = 1; }
   
   # some more tests for validity
   if (!defined $self->{_sep})
@@ -267,6 +270,11 @@ sub _initialize
     $self->{_map}->{$_} = $i++;
     }
   $self->{_cnum} = Math::BigInt->new( scalar @{$self->{_ones}} );
+
+  # _end contains entries for all valid end characters, and since these are the
+  # same than in _map, we can reuse _map to save memory and construction time
+
+  $self->{_end} = $self->{_map};
 
   return $self->{_error} = "Empty charset!"
    if ($self->{_cnum}->is_zero() && $self->{_minlen} > 0);
@@ -385,11 +393,14 @@ sub count
 sub dump
   {
   my $self = shift;
+  my $indend = shift || '';
   
-  print "type SIMPLE:\n";
-  print "start: ", join(' ',@{$self->{_start}}),"\n";
-  print "end  : ", join(' ',keys %{$self->{_end}}),"\n";
-  print "ones : ", join(' ',@{$self->{_ones}}),"\n";
+  my $txt = "type SIMPLE:\n";
+  $txt .= $indend . "start: " . join(' ',@{$self->{_start}}) . "\n";
+  my $e = $self->{_end};
+  $txt .= $indend . "end  : " . join(' ', sort { $e->{$a} <=> $e->{$b} } keys %$e) . "\n";
+  $txt .= $indend . "ones : " . join(' ',@{$self->{_ones}}) . "\n";
+  $txt;
   }
 
 sub error
@@ -447,7 +458,6 @@ sub _calc
     $i++;
     }
   $self->{_cnt} = $i-1;		# store new cache size
-  return;
   }
 
 sub class
@@ -463,7 +473,7 @@ sub class
   $len -= $self->{_minlen} if $self->{_minlen} > 0;	# correct 
   # not known yet, so calculate and cache
   $self->_calc($len) if $self->{_cnt} < $len;
-  return $self->{_count}->[$len];
+  $self->{_count}->[$len];
   }
 
 sub lowest
@@ -475,7 +485,7 @@ sub lowest
   
   # not known yet, so calculate and cache
   $self->_calc($len) if $self->{_cnt} < $len;
-  return $self->{_sum}->[$len];
+  $self->{_sum}->[$len];
   }
 
 sub highest
@@ -488,7 +498,7 @@ sub highest
   $len++;
   # not known yet, so calculate and cache
   $self->_calc($len) if $self->{_cnt} < $len;
-  return $self->{_sum}->[$len]-1;
+  $self->{_sum}->[$len]-1;
   }
 
 sub norm
@@ -499,9 +509,9 @@ sub norm
 
   return $str if !defined $self->{_sep};
 
-  $str =~ s/$self->{_sep}$//;
-  $str =~ s/^$self->{_sep}//;
-  return $str;
+  $str =~ s/$self->{_sep}\z//;		# remove at end
+  $str =~ s/^$self->{_sep}//;		# remove at front
+  $str;
   }
 
 sub is_valid
@@ -514,8 +524,7 @@ sub is_valid
   return 0 if !defined $str;
   if ($str eq '')
     {
-    return 1 if $self->{_minlen} <= 0;
-    return 0;
+    return $self->{_minlen} <= 0 ? 1 : 0;
     }
 
   my $int = Math::BigInt->bzero();
@@ -535,31 +544,31 @@ sub is_valid
       }
     }
   # length okay?
-  return 0 if scalar @chars < $self->{_minlen};
-  return 0 if scalar @chars > $self->{_maxlen};
+  return 0 if scalar @chars < $self->{_minlen} || scalar @chars > $self->{_maxlen};
 
   # valid start char?
   my $map = $self->{_map};
-  return 0 unless exists $map->{$chars[0]};
+  # XXX TODO: remove
+  # return 0 unless exists $map->{$chars[0]};
   foreach (@chars)
     {
     return 0 unless exists $map->{$_};
     }
-  return 1;
+  1;
   }
 
 sub minlen
   {
   my $self = shift;
 
-  return $self->{_minlen};
+  $self->{_minlen};
   }
 
 sub maxlen
   {
   my $self = shift;
 
-  return $self->{_maxlen};
+  $self->{_maxlen};
   }
 
 sub start
@@ -570,7 +579,7 @@ sub start
   # equals the length
   my $self = shift;
 
-  return wantarray ? @{$self->{_start}} : scalar @{$self->{_start}};
+  wantarray ? @{$self->{_start}} : scalar @{$self->{_start}};
   }
       
 sub end
@@ -581,7 +590,7 @@ sub end
   # equals the length
   my $self = shift;
 
-  return wantarray ? sort keys %{$self->{_end}} : scalar keys %{$self->{_end}};
+  wantarray ? sort keys %{$self->{_end}} : scalar keys %{$self->{_end}};
   }
 
 sub ones
@@ -589,33 +598,45 @@ sub ones
   # this returns all the one-char strings (in scalar context the count of them)
   my $self = shift;
 
-  return wantarray ? @{$self->{_ones}} : scalar @{$self->{_ones}};
+  wantarray ? @{$self->{_ones}} : scalar @{$self->{_ones}};
   }
 
 sub num2str
   {
   # convert Math::BigInt/Math::String to string
   # in list context return string and stringlen 
-  my $self = shift;
-  my $x = shift;
+  my ($self,$x) = @_;
 
-  $x = new Math::BigInt($x) unless ref $x;
+  $x = Math::BigInt->new($x) unless ref $x;
 
-  return undef if ($x->sign() !~ /^[+-]$/);
-  if ($x->is_zero())
-    {
-    return wantarray ? ('',0) : ''; 
-    }
+  return undef if $x->{sign} !~ /^[+-]$/;
+
   my $j = $self->{_cnum};			# nr of chars
 
-  if ($x <= $j)
+  if ($self->{_minlen} <= $ONE)
     {
-    my $c = $self->{_ones}->[$x-1];
-    return wantarray ? ($c,1) : $c; 		# string len == 1
+    if ($x->is_zero())
+      {
+      return wantarray ? ('',0) : ''; 
+      }
+
+    # single character?
+    if ($x <= $j && $self->{_minlen} <= $ONE)
+      {
+      my $c = $self->{_ones}->[$x->numify() - 1];
+      return wantarray ? ($c,1) : $c; 		# string len == 1
+      }
     }
 
   my $digits = $self->chars($x); my $d = $digits;
+
   # now treat the string as it were a zero-padded string of length $digits
+
+  # length is not right (too short or too long)
+  if ($digits < $self->{_minlen} || $digits > $self->{_maxlen})
+    {
+    return wantarray ? (undef,0) : undef; 
+    }
 
   my $es="";                    		# result
   # copy input, make positive number, correct to $digits and cater for 0
@@ -629,21 +650,20 @@ sub num2str
     {
     #print "bfore:  y/fac: $y / $j \n";
     ($y,$mod) = $y->bdiv($j);
-    $es = $self->{_ones}->[$mod] . $s.$es;
+    $es = $self->{_ones}->[$mod] . $s . $es;
     #print "after:  div: $y rem: $mod \n";
     $digits --;				# one digit done
     }
   # padd the remaining digits with the zero-symbol
   $es = ($self->{_ones}->[0].$s) x $digits . $es if ($digits > 0);
-  $es =~ s/$s$//;				# strip last sep 'char'
+  $es =~ s/$s\z//;				# strip last sep 'char'
   wantarray ? ($es,$d) : $es;
   }
 
 sub str2num
   {
   # convert Math::String to Math::BigInt (does not take scale into account)
-  my $self = shift;
-  my $str = shift;			# simple string
+  my ($self,$str) = @_;
 
   my $int = Math::BigInt->bzero();
   my $i = CORE::length($str);
@@ -652,34 +672,49 @@ sub str2num
   my $map = $self->{_map};
   my $clen = $self->{_clen} || 0;	# len of one char
 
-  return Math::BigInt->new($map->{$str}) if $i == $clen;
+  if ($i == $clen)
+    {
+    $int->{value} = $CALC->_new( $map->{$str} );
+    return $int;
+    }
 
-  my $j = $self->{_cnum};		# nr of chars as BigInt
-  my $mul = $int+1; 			# 1
+  my $j = $self->{_cnum}->{value};		# positive
+
   if (!defined $self->{_sep})
     {
+    # first step (mul = 1):
+    # 0 + 1 * str => str
     $i -= $clen;
-    while ($i >= 0)
+    $int->{value} = $CALC->_new( $map->{substr($str,$i,$clen)});
+    my $mul = $CALC->_copy($j);
+
+    # other steps:
+    $i -= $clen;
+    # while ($i >= 0)
+    while ($i > 0)
       {
-      $int += $mul * $map->{substr($str,$i,$clen)};
-      $mul *= $j;
+      $CALC->_add( $int->{value}, $CALC->_mul( $CALC->_copy($mul), $CALC->_new( $map->{substr($str,$i,$clen)} )));
+      $CALC->_mul( $mul , $j);
       $i -= $clen;
-      #print "s2n $int j: $j i: $i m: $mul c: ",
-      #substr($str,$i+$clen,$clen),"\n";
+#      print "s2n $int j: $j i: $i m: $mul c: ",
+#      substr($str,$i+$clen,$clen),"\n";
       }
+    # last step (no need to update $i or preserving/updating $mul)
+    $CALC->_add( $int->{value}, $CALC->_mul( $CALC->_copy($mul), $CALC->_new( $map->{substr($str,$i,$clen)} )));
     }
   else
     {
     # with sep char
+    my $mul = $CALC->_one();
     my @chars = split /$self->{_sep}/, $str;
     shift @chars if $chars[0] eq '';			# strip leading sep
-    #pop @chars if $chars[-1] eq $self->{_sep};	# strip trailing sep
     foreach (reverse @chars)	
       {
-      $int += $mul * $map->{$_};
-      $mul *= $j;
+      $CALC->_add( $int->{value}, $CALC->_mul( $CALC->_copy($mul), $CALC->_new( $map->{$_} )));
+      $CALC->_mul( $mul , $j);
       }
     }
+
   $int;
   }
 
@@ -689,27 +724,23 @@ sub char
   my $self = shift;
   my $char = shift || 0;
  
-  return undef if $char > scalar @{$self->{_ones}}; # dont create spurios elems
+  return undef if $char > scalar @{$self->{_ones}}; 	# dont create spurios elems
   $self->{_ones}->[$char];
   }
 
 sub map
   {
   # map char to number (see also char())
-  my $self = shift;
-  my $char = shift;
+  my ($self,$char) = @_;
 
-  return undef if !defined $char;
- 
-  return undef unless exists $self->{_map}->{$char};
-  $self->{_map}->{$char}-1;
+  return undef unless defined $char && exists $self->{_map}->{$char};
+  $self->{_map}->{$char} - 1;
   }
 
 sub chars
   {
   # return number of characters in output string
-  my $self = shift;
-  my $x = shift;
+  my ($self,$x) = @_;
  
   return 0 if $x->is_zero() || $x->is_nan() || $x->is_inf();
   my $i = 1;
@@ -757,17 +788,13 @@ sub next
   {
   # take one string, and return the next string following it (without
   # converting the string to it's number form first for speed reasons)
-  my $self = shift; 
-  my $str = shift;
+  my ($self,$str) = @_;
 
-# for timing disable it here:
-#  $str->{_cache}->{str} = undef; return;
-#  return if !defined $str->{_cache}->{str};
-#  print "next '$str'\n";
-  if ($str->{_cache}->{str} eq '')				# 0 => 1
+  if ($str->{_cache} eq '')				# 0 => 1
     {
-    my $min = $self->{_minlen}; $min = 1 if $min <= 0;
-    $str->{_cache}->{str} = $self->first($min); 
+    my $min = $self->{_minlen};
+    #$str->{_cache} = $self->first($min) and return if $min->is_positive();
+    $str->{_cache} = $self->{_ones}->[0];
     return;
     }
 
@@ -780,28 +807,33 @@ sub next
   # simple charsets
   my $char;
   my $clen = $self->{_clen};
-  my $s = \$str->{_cache}->{str};
-  if (defined $self->{_sep})
+  my $s = \$str->{_cache};		# ref to cache contents
+  my $sep = $self->{_sep};
+  if (defined $sep)
     {
     # split last part
-    $$s =~ /$self->{_sep}?(.*?)$/; $char = $1;
+    $$s =~ /.*$sep(.*?)\z/; $char = $1;
+    $char = $$s unless $$s =~ /$sep/;
     }
   else  
     {
     # extract last char
     $char = substr($$s,-$clen,$clen);
     }
+  my $old = $char;	# for seperator replacement
   $char = $self->{_map}->{$char};	# map is +1 by default
-  if ((!defined $char) || ($char >= @{$self->{_start}}))
+  $char -=2 if $str->{sign} eq '-';
+  if ((!defined $char) || ($char >= @{$self->{_start}}) || ($char < 0))
     {
     # overflow
-    $str->{_cache}->{str} = undef; return;
+    $str->{_cache} = undef;		# invalidate cache
+    return;
     }
   $char = $self->{_start}->[$char];	# num 2 char
-  if (defined $self->{_sep})
+  if (defined $sep)
     {
     # split last part and replace
-    $$s =~ s/($self->{_sep}?)(.*?)$/$1$char/;
+    $$s =~ s/$old\z/$char/;
     }
   else
     {
@@ -812,47 +844,53 @@ sub next
 
 sub prev
   {
-  my $self = shift;
-  my $str = shift;
+  my ($self,$str) = @_;
 
-  if ($str->{_cache}->{str} eq '')				# 0 => -1
+  if ($str->{_cache} eq '')				# 0 => -1
     {
-    my $min = $self->{_minlen}; $min = -1 if $min >= 0;
-    $str->{_cache}->{str} = $self->first($min); 
+    my $min = $self->{_minlen};
+    $str->{_cache} = undef, and return if $min->is_positive(); # >= 0;
+    $str->{_cache} = $self->{_ones}->[0];
     return;
     }
 
   # simple charsets
   my $char;
   my $clen = $self->{_clen};
-  my $s = \$str->{_cache}->{str};
-  if (defined $self->{_sep})
+  my $s = \$str->{_cache};
+  my $sep = $self->{_sep};
+  if (defined $sep)
     {
     # split last part and replace
-    $$s =~ /$self->{_sep}(.*?)$/; $char = $1;
+    $$s =~ /.*$sep(.*?)\z/; $char = $1;
+    $char = $$s unless $$s =~ /$sep/;
     }
   else  
     {
     # extract last char and replace
     $char = substr($$s,-$clen,$clen);
     }
+
   my $old = $char;	# for seperator replacement
   if ((defined $char) && (exists $self->{_map}->{$char}))
     {
-    $char = $self->{_map}->{$char}-2;		# map is +1 by default
-    if ($char < 0)
+    $char = $self->{_map}->{$char} - 1;
+    $char += $str->{sign} eq '-' ? 1 : -1;
+    if ($char < 0 || $char >= @{$self->{_start}})
       {
-      $str->{_cache}->{str} = undef; return; 	# underflow
+      $str->{_cache} = undef;			# invalidate cache
+      return; 					# under or overflow
       }
     }
   else
     {
-    $str->{_cache}->{str} = undef; return; 	# underflow if char not defined
+    $str->{_cache} = undef;			# invalidate cache
+    return; 					# underflow if char not defined
     }
   $char = $self->{_start}->[$char];		# map num back to char
   if (defined $self->{_sep})
     {
-    $$s =~ s/$old$/$char/; 			# split last part and replace
+    $$s =~ s/$old\z/$char/; 			# split last part and replace
     }
   else
     {
@@ -1027,7 +1065,7 @@ perl5.005, Exporter, Math::BigInt
 
 =head1 EXPORTS
 
-Exports nothing on default, can export C<analyze> and C<SIMPLE>.
+Exports nothing on default, can export C<analyze>.
 
 =head1 DESCRIPTION
 

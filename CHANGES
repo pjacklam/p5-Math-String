@@ -42,6 +42,14 @@ Math::String:
 2003-07-26 1.23: removed shebang line
 2003-12-11 1.24 Tels 599 tests
   * new( { str => ..., num => ... } ) did not honour scale from charset
+2004-11-20 1.25 Tels 662 tests
+  * simplify caching:
+    + remove unused len cache
+    + since we only cache on thing, use a plain scalar instead of a hash, this
+      saves memory per Math::String object and makes everything go a little
+      faster since a hash lookup for ->{str} is no longer necessary
+  * bstr() for uncached strings with SIMPLE charset is now about twice as fast
+  * copy() is about 16% faster (due to simpler cache and streamlining)
 
 ############################################################################## 
 Math::String::Charset:
@@ -93,7 +101,18 @@ Math::String::Charset:
 2003-07-26 1.15: require Math::String::Charset::Wordlist vs. use
 		 added lib => 'GMP'
 		 removed shebang line
-
+2004-11-20 1.16
+  * for simple Charsets, the _end hash can be shared with the _map hash. That
+    reduces memory by at least 20% (a..z, leaning towards 30% for larger sets)
+    and makes new() at least 10% (a..z, more for larger sets) faster, too :)
+  * dump() returns the dump as string instead of printing it
+  * fix end keys in dump from SIMPLE charsets
+  * dump() takes optional indend parameter
+  * remove unused SIMPLE() in Charset.pm
+  * streamlined str2num() to make "new()" faster
+  * streamlined num2str() to make "bstr()" faster
+  * remove GMP lib (let caller decide)
+   
 ############################################################################## 
 Math::String::Charset::Grouped:
 2000-09-20 0.01: first version from Charset
@@ -102,6 +121,8 @@ Math::String::Charset::Grouped:
 2003-04-14 0.04: fix for scale not beeing a legal parameter to new()
 2003-07-26 0.05: added lib => 'GMP'
 		 removed shebang line
+2004-11-20 0.06: fix dump() for GROUPED charsets
+		 remove GMP lib (let caller decide)
 
 ############################################################################## 
 Math::String::Charset::Nested:
@@ -112,6 +133,7 @@ Math::String::Charset::Nested:
 2003-04-14 0.03: fix for scale not beeing a legal parameter to new()
 2003-07-26 0.04: added lib => 'GMP'
 		 removed shebang line
+2004-11-20 0.05: remove GMP lib (let caller decide)
 
 ############################################################################## 
 Math::String::Charset::Wordlist was moved into it's own distribution
@@ -126,3 +148,5 @@ Math::String::Sequence:
 		fixed a potential problem in as_array()
 2003-07-26 1.04 added lib => 'GMP'
 		removed shebang line
+2004-11-20 0.05: remove GMP lib (let caller decide)
+

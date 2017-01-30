@@ -12,22 +12,22 @@
 # the following hash values are used
 # _set			  : ref to charset object
 # sign, value, _a, _f, _p : from BigInt 
-# _cache		  : hash, cache's the string and certain other values
-#			  : for faster bstr() and add/dec
+# _cache		  : caches string form for speed
 
 package Math::String;
 my $class = "Math::String";
 
 use Exporter;
-use Math::BigInt lib => 'GMP';	# prefer GMP
+use Math::BigInt;
 @ISA = qw(Exporter Math::BigInt);
-@EXPORT_OK = qw( as_number last first string from_number bzero bone binf bnan
-               );
+@EXPORT_OK = qw(
+   as_number last first string from_number bzero bone binf bnan
+  );
 use Math::String::Charset;
 use strict;
 use vars qw($VERSION $AUTOLOAD $accuracy $precision $div_scale $round_mode);
-$VERSION = '1.24';	# Current version of this package
-require  5.005;		# requires this Perl version or later
+$VERSION = '1.25';	# Current version of this package
+require  5.008003;	# requires this Perl version or later
 
 $accuracy   = undef;
 $precision  = undef;
@@ -108,7 +108,7 @@ sub bzero
     bless $self, $class;				# rebless
     $self->_set_charset(shift);
     }
-  $self->{_cache}->{str} = '';
+  $self->{_cache} = undef;				# invalidate cache
   $self;
   }
 
@@ -131,7 +131,7 @@ sub bone
     }
   my $min = $self->{_set}->minlen();
   $min = 1 if $min <= 0;
-  $self->{_cache}->{str} = $self->{_set}->first($min);	# first of minlen
+  $self->{_cache} = $self->{_set}->first($min);		# first of minlen
   $self;
   }
 
@@ -193,8 +193,8 @@ sub new
     bless $self, $class;			# rebless
     $self->_set_charset(shift);			# if given charset, copy over
     $self->bdiv($self->{_set}->{_scale})
-      if defined $self->{_set}->{_scale};  # input is scaled?
-    $self->{_cache}->{str} = $value->{str};	# string form
+      if defined $self->{_set}->{_scale};  	# input is scaled?
+    $self->{_cache} = $value->{str};		# string form
     }
   elsif (ref($value))
     {
@@ -247,8 +247,8 @@ sub _initialize
     }
   foreach my $c (keys %$int) { $self->{$c} = $int->{$c}; }
   
-  $self->{_cache}->{str} = $cs->norm($value);	# caching normalized form
-  return $self;
+  $self->{_cache} = $cs->norm($value);		# caching normalized form
+  $self;
   }
 
 sub copy
@@ -270,19 +270,23 @@ sub copy
   my $self = {}; bless $self,$c;
   foreach my $k (keys %$x)
     {
+    my $ref = ref($x->{$k});
     if ($k eq 'value')
       {
       $self->{$k} = $CALC->_copy($x->{$k});
       }
-    elsif (ref($x->{$k}) eq 'SCALAR')
+    #elsif (ref($x->{$k}) eq 'SCALAR')
+    elsif ($ref eq 'SCALAR')
       {
       $self->{$k} = \${$x->{$k}};
       }
-    elsif (ref($x->{$k}) eq 'ARRAY')
+    #elsif (ref($x->{$k}) eq 'ARRAY')
+    elsif ($ref eq 'ARRAY')
       {
       $self->{$k} = [ @{$x->{$k}} ];
       }
-    elsif (ref($x->{$k}) eq 'HASH')
+    #elsif (ref($x->{$k}) eq 'HASH')
+    elsif ($ref eq 'HASH')
       {
       # only one level deep!
       foreach my $h (keys %{$x->{$k}})
@@ -290,14 +294,16 @@ sub copy
         $self->{$k}->{$h} = $x->{$k}->{$h};
         }
       }
-    elsif (ref($x->{$k}) =~ /^Math::String::Charset/)
+    #elsif (ref($x->{$k}) =~ /^Math::String::Charset/)
+    elsif ($ref =~ /^Math::String::Charset/)
       {
       $self->{$k} = $x->{$k};           # for speed reasons share this
       }
-    elsif (ref($x->{$k}))
+    #elsif (ref($x->{$k}))
+    elsif ($ref)
       {
-      my $c = ref($x->{$k});
-      $self->{$k} = $c->new($x->{$k});  # no copy() due to deep rec
+      # my $c = ref($x->{$k});
+      $self->{$k} = $ref->new($x->{$k});  # no copy() due to deep rec
       }
     else
       {
@@ -345,30 +351,22 @@ sub bstr
 
   return $x unless ref $x;			# scalars get simple returned
   return undef if $x->{sign} !~ /^[+-]$/;	# short cut
-  return '' if $x->is_zero();			# short cut
 
-  return $x->{_cache}->{str} if defined $x->{_cache}->{str};
+  return $x->{_cache} if defined $x->{_cache};
+
   # num2str needs (due to overloading "$x-1") a Math::BigInt object, so make it 
   # positively happy
   my $int = Math::BigInt->bzero();
   $int->{value} = $x->{value};
-  ($x->{_cache}->{str},$x->{_cache}->{len}) = $x->{_set}->num2str($int);
-  if (($x->{_cache}->{len} < $x->{_set}->{_minlen}) ||
-     ($x->{_cache}->{len} > $x->{_set}->{_maxlen}))
-    {
-    # illegal string
-    $x->{_cache}->{str} = undef;
-    delete $x->{_cache}->{len};
-    }
-  $x->{_cache}->{str};
+  $x->{_cache} = $x->{_set}->num2str($int);
+
+  $x->{_cache};
   }
 
 sub as_number
   {
   # return yourself as MBI
   my $self = shift;
-
-  # old slow way:  return Math::BigInt->new($self->SUPER::bstr());
 
   # make a copy of us and delete any specific (non-MBI) keys
   my $x = $self->copy();
@@ -427,13 +425,14 @@ sub is_valid
   my $x = shift;
 
   # What does charset say to string?
-  if (defined $x->{_cache}->{str})
+  if (defined $x->{_cache})
     {
-    return $x->{_set}->is_valid($x->{_cache}->{str});
+    # XXX TODO: cached string should always be valid?
+    return $x->{_set}->is_valid($x->{_cache});
     }
   else
     {
-    $x->{_cache}->{str} = $x->bstr();	# no cache, so create it
+    $x->{_cache} = $x->bstr();		# create cache
     }
   my $l = $x->length();
   return 0 if ($l < $x->minlen() || $l > $x->maxlen());
@@ -449,7 +448,7 @@ sub binc
    (ref($_[0]),@_) : (Math::BigInt::objectify(1,@_));
   
   # binc calls modify, and thus destroys the cache, so store it
-  my $str = $x->{_cache}->{str};
+  my $str = $x->{_cache};
   $x->SUPER::binc();
 
   # if old value cached and no rounding happens
@@ -458,7 +457,7 @@ sub binc
 #   && (!defined $x->accuracy()) && (!defined $x->precision())
    )
     {
-    $x->{_cache}->{str} = $str;		# restore cache	
+    $x->{_cache} = $str;		# restore cache	
     $x->{_set}->next($x);		# update string cache
     }
   $x;
@@ -468,11 +467,9 @@ sub bdec
   {
   my ($self,$x,$a,$p,$r) = ref($_[0]) ? 
    (ref($_[0]),@_) : (Math::BigInt::objectify(1,@_));
-  #my ($self,$x,$a,$p,$r) = Math::BigInt::objectify(1,@_);
  
   # bdec calls modify, and thus destroys the cache, so store it
-  my $str = $x->{_cache}->{str};
-
+  my $str = $x->{_cache};
   $x->SUPER::bdec();
 
   # if old value cached and no rounding happens
@@ -481,7 +478,7 @@ sub bdec
  #  && (!defined $x->accuracy()) && (!defined $x->precision())
    )
     {
-    $x->{_cache}->{str} = $str;		# restore cache	
+    $x->{_cache} = $str;		# restore cache	
     $x->{_set}->prev($x);		# update string cache
     }
   $x;
@@ -492,8 +489,7 @@ sub bdec
 
 sub modify
   {
-  # invalidate cache if $self is going to be modified
-  $_[0]->{_cache} = undef;	# faster than = {}
+  $_[0]->{_cache} = undef;	# invalidate cache
   0;				# go ahead, modify
   }
 
