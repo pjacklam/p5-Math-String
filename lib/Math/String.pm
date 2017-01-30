@@ -2,7 +2,7 @@
 # Math/String.pm -- package which defines a base class for calculating
 # with big integers that are defined by arbitrary char sets.
 #
-# Copyright (C) 1999-2003 by Tels. All rights reserved.
+# Copyright (C) 1999 - 2005 by Tels.
 #############################################################################
 
 # see:
@@ -18,7 +18,7 @@ package Math::String;
 my $class = "Math::String";
 
 use Exporter;
-use Math::BigInt lib => 'GMP';
+use Math::BigInt;
 @ISA = qw(Exporter Math::BigInt);
 @EXPORT_OK = qw(
    as_number last first string from_number bzero bone binf bnan
@@ -26,7 +26,7 @@ use Math::BigInt lib => 'GMP';
 use Math::String::Charset;
 use strict;
 use vars qw($VERSION $AUTOLOAD $accuracy $precision $div_scale $round_mode);
-$VERSION = '1.26';	# Current version of this package
+$VERSION = '1.27';	# Current version of this package
 require  5.008003;	# requires this Perl version or later
 
 $accuracy   = undef;
@@ -47,12 +47,18 @@ use overload
 '--'    =>      \&bdec, 
 ;         
 
-my $CALC;
+my $CALC = 'Math::BigInt::Calc';
 
-BEGIN
+sub import
   {
-  # this will fail if Math::BigInt is loaded afterwards with a different lib!
+  my $self = shift;
+
   $CALC = Math::BigInt->config()->{lib} || 'Math::BigInt::Calc';
+
+  # register us with MBI to get notified of future lib changes
+  Math::BigInt::_register_callback( $self, sub { $CALC = $_[0]; } );
+
+  Math::BigInt::import($self, @_);
   }
  
 sub string
@@ -1069,7 +1075,7 @@ the same terms as Perl itself.
 If you use this module in one of your projects, then please email me. I want
 to hear about how my code helps you ;)
 
-Tels http://bloodgate.com 2000-2003.
+Tels http://bloodgate.com 2000 - 2005.
 
 =cut
 

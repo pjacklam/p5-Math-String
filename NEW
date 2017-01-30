@@ -1,8 +1,10 @@
-This lists only the changes for the current release (v1.26) over the last
+This lists only the changes for the current release (v1.27) over the last
 version, since CHANGES is now quite big:
 
-* Loading Math::String before loading Math::BigInt lib => GMP broke due to
-  caching of the lib from Math::BigInt, so we load GMP rightaway
+  * use register_callback to get notified by Math::BigInt on lib changes
+  * remove a couple of needless return statements in Sequence.pm
+  * require Math::BigInt v1.74
+  * write out own META.yml
 
 #############################################################################
 
