@@ -1,5 +1,3 @@
-#!/usr/bin/perl -w
-
 #############################################################################
 # Math/String/Charset/Nested -- charsets for Math/String
 #
@@ -15,11 +13,11 @@ package Math::String::Charset::Nested;
 use base Math::String::Charset;
 
 use vars qw($VERSION);
-$VERSION = 0.03;	# Current version of this package
+$VERSION = '0.04';	# Current version of this package
 require  5.005;		# requires this Perl version or later
 
 use strict;
-use Math::BigInt;
+use Math::BigInt lib => 'GMP';
 
 use vars qw/$die_on_error/; 
 $die_on_error = 1;		# set to 0 to not die

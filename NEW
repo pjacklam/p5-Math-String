@@ -1,8 +1,11 @@
-This lists only the changes for the current release (v1.22) over the last
+This lists only the changes for the current release (v1.23) over the last
 version, since CHANGES is now quite big:
 
-* scale parameter to new() needs listing as allowed
-* added method copy() to Math::String::Charset
-* made Math::String::Charset::Wordlist into it's own distribution
-
-* 595 tests (scale => $N as parameter to new(), copy())
+* Math::String::Charset used Math::String::Charset::Wordlist, instead of
+  requiring it. This means install of Math::String failed w/o an installed
+  Math::String::Charset::Wordlist, which in turn needed installed Math::String.
+  Oups.
+* removed the needless shebang (#!/usr/bin/perl ..) lines
+* added "lib => 'GMP'" to all 'use Math::BigInt;' lines
+* prerequisite Math::BigInt v1.65
+* 595 tests

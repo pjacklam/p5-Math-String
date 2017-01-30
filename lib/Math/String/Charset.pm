@@ -1,5 +1,3 @@
-#!/usr/bin/perl -w
-
 #############################################################################
 # Math/String/Charset.pm -- package which defines a charset for Math/String
 #
@@ -16,7 +14,7 @@ BEGIN
   }
 
 use vars qw($VERSION);
-$VERSION = 1.14;	# Current version of this package
+$VERSION = '1.13';	# Current version of this package
 require  5.005;		# requires this Perl version or later
 
 use strict;
@@ -29,7 +27,6 @@ use constant SIMPLE => 1;
 
 use Math::String::Charset::Nested;
 use Math::String::Charset::Grouped;
-use Math::String::Charset::Wordlist;
 
 # following hash values are used:
 # _clen  : length of one character (all chars must have same len unless sep)
@@ -115,8 +112,11 @@ sub new
       {
       return Math::String::Charset::Grouped->new($value)
         if ($self->{_type} == 1);
-      return Math::String::Charset::Wordlist->new($value)
-        if ($self->{_type} == 2) && ($self->{_order} == 1);
+      if (($self->{_type} == 2) && ($self->{_order} == 1))
+	{
+	require Math::String::Charset::Wordlist;
+        return Math::String::Charset::Wordlist->new($value);
+	}
       return Math::String::Charset::Nested->new($value)
         if ($self->{_order} == 2);
       }

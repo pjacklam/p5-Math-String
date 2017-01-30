@@ -1,5 +1,3 @@
-#!/usr/bin/perl -w
-
 #############################################################################
 # Math/String.pm -- package which defines a base class for calculating
 # with big integers that are defined by arbitrary char sets.
@@ -28,7 +26,7 @@ use Math::BigInt lib => 'GMP';	# prefer GMP
 use Math::String::Charset;
 use strict;
 use vars qw($VERSION $AUTOLOAD $accuracy $precision $div_scale $round_mode);
-$VERSION = '1.22';	# Current version of this package
+$VERSION = '1.23';	# Current version of this package
 require  5.005;		# requires this Perl version or later
 
 $accuracy   = undef;
@@ -1076,7 +1074,7 @@ the same terms as Perl itself.
 If you use this module in one of your projects, then please email me. I want
 to hear about how my code helps you ;)
 
-Tels http://bloodgate.com 2000-2001.
+Tels http://bloodgate.com 2000-2003.
 
 =cut
 
