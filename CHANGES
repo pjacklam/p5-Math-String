@@ -1,0 +1,46 @@
+
+Complete version history
+========================
+
+############################################################################## 
+Math::String:
+
+1.02: fixed new() as copy, bstr works now, dropped multiple charsets
+1.03: 02/2001: added support for Math::String::Charset and thus bi-grams
+               added: caching for more speed
+2001-02-14 1.04: fixed inheritance/overloading bugs (objectify)
+                 finally got rid of copy&paste overload
+2001-02-16 1.05: fixed overload bug in cmp (Math::String cmp something other)
+2001-02-22 1.06: fixed: digits() => length()
+2001-03-18 1.07: fixed: documentation
+2001-03-25 1.08: added: support for caching of string form
+2001-04-13 1.09: as_number: returns now Math::BigInt
+2001-05-07 1.10: finally got rid of C&P of overload section
+2001-05-13 1.11: added accuracy/precision/fallback/rnd_mode and tests for this
+
+############################################################################## 
+Math::String::Charset:
+
+2000-02-07 1.02: first version with bi-grams
+2000-02-14 1.03: fixed: simple charsets to work now,
+                 added: _end hash and _ones set
+2000-02-16 1.04: added: char(), charlength()
+2000-02-17 1.05: fixed: chars with diff. len raise error, works now with
+                        characters of length > 1
+                        some slight optimizations for simple charsets
+2000-02-22 1.06: fixed: documentation (fill-characters, die on error)
+			toggle $Math::String::Charset::die_on_error
+		        num2str() is now about a small, constant amount faster
+2000-03-18 1.07: fixed: documentation
+		 added: separator string/char for 'the lazy fox' style strings
+		 	renamed type() to order()
+		 	documented that length() always returns count of chars
+2000-03-25 1.08: added: next(), prev() for simple charsets (cache in M::S)
+
+############################################################################## 
+Math::String::Sequence:
+
+2001-03-20 1.00 first version, complete with test and doc
+2001-03-24 1.01 support for reversed sequences
+2001-04-21 1.02 added: as_array for 'a'..'z' emulation
+
