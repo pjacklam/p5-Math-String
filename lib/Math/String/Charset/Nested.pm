@@ -3,7 +3,7 @@
 #############################################################################
 # Math/String/Charset/Nested -- charsets for Math/String
 #
-# Copyright (C) 1999-2001 by Tels. All rights reserved.
+# Copyright (C) 1999-2003 by Tels. All rights reserved.
 #############################################################################
 
 # todo: tri-grams etc
@@ -15,7 +15,7 @@ package Math::String::Charset::Nested;
 use base Math::String::Charset;
 
 use vars qw($VERSION);
-$VERSION = 0.01;	# Current version of this package
+$VERSION = 0.02;	# Current version of this package
 require  5.005;		# requires this Perl version or later
 
 use strict;
@@ -59,13 +59,14 @@ sub _strict_check
   my $self = shift;
   my $value = shift;
 
-  return $self->{_error} = "Wrong type '$self->{_type}' for __PACKAGE__"
+  my $class = ref($self);
+  return $self->{_error} = "Wrong type '$self->{_type}' for $class"
     if $self->{_type} != 0;
-  return $self->{_error} = "Wrong order'$self->{_order}' for __PACKAGE__"
+  return $self->{_error} = "Wrong order'$self->{_order}' for $class"
     if $self->{_order} != 2;
   foreach my $key (keys %$value)
     {
-    return $self->{_error} = "Illegal parameter '$key' for __PACKAGE__"
+    return $self->{_error} = "Illegal parameter '$key' for $class"
       if $key !~ /^(start|minlen|maxlen|sep|bi|end|charlen)$/;
     }
   }
@@ -636,6 +637,9 @@ sub prev
   return;
 
   }
+
+
+__END__
 
 #############################################################################
 
@@ -1653,8 +1657,7 @@ None doscovered yet.
 If you use this module in one of your projects, then please email me. I want
 to hear about how my code helps you ;)
 
-This module is (C) Copyright by Tels http://bloodgate.com 2000-2001.
+This module is (C) Copyright by Tels http://bloodgate.com 2000-2003.
 
 =cut
 
-1;

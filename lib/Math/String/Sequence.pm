@@ -3,7 +3,7 @@
 #############################################################################
 # Math/String/Sequence.pm -- defines a sequence or range of strings.
 #
-# Copyright (C) 2001 by Tels. All rights reserved.
+# Copyright (C) 2001-2003 by Tels. All rights reserved.
 #############################################################################
 
 # the following hash values are used
@@ -15,7 +15,7 @@
 
 package Math::String::Sequence;
 use vars qw($VERSION);
-$VERSION = 1.02;    # Current version of this package
+$VERSION = 1.03;    # Current version of this package
 require  5.005;     # requires this Perl version or later
 
 use Exporter;
@@ -214,14 +214,16 @@ sub as_array
   my $f = $x->{_first}; my $l = $x->{_last};
   if ($x->{_rev})
     {
-    while ($f >= $l) { push @a,$f; $f--; }
+    while ($f >= $l) { push @a,$f->copy(); $f->bdec(); }
     }
   else
     {
-    while ($f <= $l) { push @a,$f; $f++; }
+    while ($f <= $l) { push @a,$f->copy(); $f->binc(); }
     }
   return @a;
   }
+
+__END__
 
 #############################################################################
 
@@ -358,8 +360,7 @@ None discovered yet.
 If you use this module in one of your projects, then please email me. I want
 to hear about how my code helps you ;)
 
-This module is (C) Tels http://bloodgate.com 2001.
+This module is (C) Tels http://bloodgate.com 2001-2003.
 
 =cut
 
-1;

@@ -25,8 +25,8 @@ my $a;
 
 for my $c (qw/ Math::String::Charset Math::String::Charset::Nested/)
   {
-  $a = $c->new( { type => 2 } );
-  ok ($a->error(),"Illegal type '2'");
+  $a = $c->new( { type => 3 } );
+  ok ($a->error(),"Illegal type '3'");
 
   $a = Math::String::Charset->new( { type => -1 } );
   ok ($a->error(),"Illegal type '-1'");

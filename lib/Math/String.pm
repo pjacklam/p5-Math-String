@@ -4,7 +4,7 @@
 # Math/String.pm -- package which defines a base class for calculating
 # with big integers that are defined by arbitrary char sets.
 #
-# Copyright (C) 1999-2001 by Tels. All rights reserved.
+# Copyright (C) 1999-2003 by Tels. All rights reserved.
 #############################################################################
 
 # see:
@@ -29,8 +29,8 @@ use Math::BigInt;
 use Math::String::Charset;
 use strict;
 use vars qw($VERSION $AUTOLOAD $accuracy $precision $div_scale $round_mode);
-$VERSION = 1.18;    # Current version of this package
-require  5.005;     # requires this Perl version or later
+$VERSION = 1.19;	# Current version of this package
+require  5.005;		# requires this Perl version or later
 
 $accuracy   = undef;
 $precision  = undef;
@@ -46,8 +46,8 @@ use overload
 	        $_[2] ?  $str1 cmp $str : $str cmp $str1;
 	        },
 # can modify arg of ++ and --, so avoid a new-copy for speed
-'++'    =>      \&binc, #sub { binc($_[0]); },
-'--'    =>      \&bdec, #sub { bdec($_[0]); },
+'++'    =>      \&binc, 
+'--'    =>      \&bdec, 
 ;         
 
 my $CALC;
@@ -57,11 +57,10 @@ BEGIN
   $CALC = Math::BigInt->config()->{lib};
   }
 
-# some shortcuts for easier life
 sub string
   {
   # exportable version of new
-  return $class->new(@_);
+  $class->new(@_);
   }
 
 sub from_number
@@ -75,7 +74,7 @@ sub from_number
   my $self = Math::BigInt->new($val);
   bless $self, $class;         # rebless
   $self->_set_charset(shift);
-  return $self; 
+  $self; 
   }
 
 sub bzero
@@ -96,7 +95,7 @@ sub bzero
     $self->_set_charset(shift);
     }
   $self->{_cache}->{str} = '';
-  return $self;
+  $self;
   }
 
 sub bone
@@ -119,7 +118,7 @@ sub bone
   my $min = $self->{_set}->minlen();
   $min = 1 if $min <= 0;
   $self->{_cache}->{str} = $self->{_set}->first($min);	# first of minlen
-  return $self;
+  $self;
   }
 
 sub bnan
@@ -140,7 +139,7 @@ sub bnan
     $self->_set_charset(shift);
     }
   $self->{_cache} = undef;
-  return $self;
+  $self;
   }
 
 sub binf
@@ -161,7 +160,7 @@ sub binf
     $self->_set_charset(shift);
     }
   $self->{_cache} = undef;
-  return $self;
+  $self;
   }
 
 ###############################################################################
@@ -174,7 +173,6 @@ sub new
   my $value = shift; $value = '' if !defined $value;
 
   my $self = {};
-  #print "$class new($value)\n";
   if (ref($value) eq 'HASH')
     {
     $self = Math::BigInt->new($value->{num});	# number form
@@ -186,23 +184,16 @@ sub new
     {
     $self = $value->copy(); 			# got an object, so make copy
     bless $self, $class;			# rebless
-    print "changing charset to $_[0]\n" if defined $_[0];	
     $self->_set_charset(shift) if defined $_[0];# if given charset, copy over
     $self->{_cache} = undef;
     }
   else
     {
-    # print "non ref new ",caller(),"\n";
     bless $self, $class;
     $self->_set_charset(shift);			# if given charset, copy over
     $self->_initialize($value);
-    #print "result of new $self\n";
     }
-  #foreach (keys %$self)
-  #  {
-  #  print "new $_ => $self->{$_}\n";
-  #  }
-  return $self; 
+  $self; 
   }
 
 sub _set_charset
@@ -216,7 +207,7 @@ sub _set_charset
   $cs = Math::String::Charset->new( $cs ) if ref($cs) =~ /^(ARRAY|HASH)$/;
   die "charset '$cs' is not a reference" unless ref($cs);
   $self->{_set} = $cs;
-  return $self;
+  $self;
   }
 
 #############################################################################
@@ -233,6 +224,11 @@ sub _initialize
   return $self->bnan() if !$cs->is_valid($value);
  
   my $int = $cs->str2num($value);
+  if (!ref($int))
+    {
+    require Carp;
+    Carp::croak ("$int is not a reference to a Big* object");
+    }
   foreach my $c (keys %$int) { $self->{$c} = $int->{$c}; }
   
   $self->{_cache}->{str} = $cs->norm($value);	# caching normalized form
@@ -298,25 +294,25 @@ sub copy
 sub charset
   {
   my $self = shift;
-  return $self->{_set};
+  $self->{_set};
   }
 
 sub class
   {
   my $self = shift;
-  return $self->{_set}->class(@_);
+  $self->{_set}->class(@_);
   }
 
 sub minlen
   {
   my $x = shift;
-  return $x->{_set}->minlen();
+  $x->{_set}->minlen();
   }
 
 sub maxlen
   {
   my $x = shift;
-  return $x->{_set}->minlen();
+  $x->{_set}->minlen();
   }
 
 sub length
@@ -324,7 +320,7 @@ sub length
   # return number of characters in output
   my $x = shift;
 
-  return $x->{_set}->chars($x);
+  $x->{_set}->chars($x);
   }
 
 sub bstr
@@ -348,7 +344,7 @@ sub bstr
     $x->{_cache}->{str} = undef;
     delete $x->{_cache}->{len};
     }
-  return $x->{_cache}->{str};
+  $x->{_cache}->{str};
   }
 
 sub as_number
@@ -369,13 +365,13 @@ sub as_number
 sub order
   {
   my $x = shift;
-  return $x->{_set}->order();
+  $x->{_set}->order();
   }
 
 sub type
   {
   my $x = shift;
-  return $x->{_set}->type();
+  $x->{_set}->type();
   }
 
 sub last
@@ -387,7 +383,7 @@ sub last
     $x = Math::String->new('',$_[2]);	# Math::String->first(3,$set);
     }
   my $es = $x->{_set}->last($_[1]);
-  return $x->_initialize($es);
+  $x->_initialize($es);
   }
 
 sub first
@@ -399,13 +395,13 @@ sub first
     $x = Math::String->new('',$_[2]);	# Math::String->first(3,$set);
     }
   my $es = $x->{_set}->first($_[1]);
-  return $x->_initialize($es);
+  $x->_initialize($es);
   }
 
 sub error
   {
   my $x = shift;
-  return $x->{_set}->error();
+  $x->{_set}->error();
   }
 
 sub is_valid
@@ -423,7 +419,7 @@ sub is_valid
     }
   my $l = $x->length();
   return 0 if ($l < $x->minlen() || $l > $x->maxlen());
-  return 1;				# all okay
+  1;					# all okay
   }
 
 #############################################################################
@@ -482,6 +478,8 @@ sub modify
   $_[0]->{_cache} = undef;	# faster than = {}
   0;				# go ahead, modify
   }
+
+__END__
 
 #############################################################################
 

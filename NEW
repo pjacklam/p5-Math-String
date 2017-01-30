@@ -1,8 +1,10 @@
-This lists only the changes for the current release (v1.18) over the last
-version, since HISTORY is now quite big:
+This lists only the changes for the current release (v1.19) over the last
+version, since CHANGES is now quite big:
 
-# v1.16 was about 15% slower on (while $x++ < $e) loops. This version
-  fixed binc() and bdec(), so that it is now about factor 4 faster. This means
-  the loop above is now about twice as fast ;)
-* as_number() is now about factor 2 faster
-
+* removed debug printout (oups)
+* added __END__ for faster loading
+* removed needless return statements for a trifle more speed
+* added Math::String::Charset::Wordlist
+* fixed a potential problem in Sequence as_array 
+* fixed __PACKAGE in error messages to be actual class name
+* 581 tests now (added wordlist tests)

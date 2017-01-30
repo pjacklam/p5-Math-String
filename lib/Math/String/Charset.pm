@@ -3,7 +3,7 @@
 #############################################################################
 # Math/String/Charset.pm -- package which defines a charset for Math/String
 #
-# Copyright (C) 1999-2001 by Tels. All rights reserved.
+# Copyright (C) 1999-2003 by Tels. All rights reserved.
 #############################################################################
 
 package Math::String::Charset;
@@ -16,7 +16,7 @@ BEGIN
   }
 
 use vars qw($VERSION);
-$VERSION = 1.11;	# Current version of this package
+$VERSION = 1.12;	# Current version of this package
 require  5.005;		# requires this Perl version or later
 
 use strict;
@@ -29,14 +29,15 @@ use constant SIMPLE => 1;
 
 use Math::String::Charset::Nested;
 use Math::String::Charset::Grouped;
+use Math::String::Charset::Wordlist;
 
 # following hash values are used:
 # _clen  : length of one character (all chars must have same len unless sep)
 # _start : contains array of all valid start characters
 # _ones  : list of one-character strings (cross of _end and _start)
 # _end   : contains hash (for easier lookup) of all valid end characters
-# _order : = 1
-# _type  : = 0
+# _order : = 1 (1 = simple, 2 = nested)
+# _type  : = 0 (0 = simple, 1 = grouped, 2 = wordlist)
 # _error : error message or ""
 # _count : array of count of different strings with length x
 # _sum   : array of starting number for strings with length x
@@ -56,6 +57,13 @@ use Math::String::Charset::Grouped;
 # _bmap : hash with refs to hash of bi-grams
 # _scnt : array of hashes, count of strings starting with this character
 # _sm	: hash w/ mapping of start characters for faster lookup
+
+# wordlist (not used here):
+# _order    : = 1
+# _type     : = 3
+# _file     : dictionary file
+# _stages   : stages (1,2,3)
+# _mutations: mutations (1..1023) 
 
 sub new
   {
@@ -104,15 +112,17 @@ sub new
     if ($class eq 'Math::String::Charset')
       {
       return Math::String::Charset::Grouped->new($value)
-        if ($self->{_type} != 0);
+        if ($self->{_type} == 1);
+      return Math::String::Charset::Wordlist->new($value)
+        if ($self->{_type} == 2) && ($self->{_order} == 1);
       return Math::String::Charset::Nested->new($value)
-        if ($self->{_order} > 1);
+        if ($self->{_order} == 2);
       }
     $self->_strict_check($value);
     $self->_initialize($value);
     } 
   die ($self->{_error}) if $die_on_error && $self->{_error} ne '';
-  return $self; 
+  $self; 
   }
 
 #############################################################################
@@ -124,13 +134,14 @@ sub _strict_check
   my $self = shift;
   my $value = shift;
 
-  return $self->{_error} = "Wrong type '$self->{_type}' for __PACKAGE__"
+  my $class = ref($self);
+  return $self->{_error} = "Wrong type '$self->{_type}' for $class"
     if $self->{_type} != 0;
-  return $self->{_error} = "Wrong order'$self->{_order}' for __PACKAGE__"
+  return $self->{_error} = "Wrong order'$self->{_order}' for $class"
     if $self->{_order} != 1;
   foreach my $key (keys %$value)
     {
-    return $self->{_error} = "Illegal parameter '$key' for __PACKAGE__"
+    return $self->{_error} = "Illegal parameter '$key' for $class"
       if $key !~ /^(start|minlen|maxlen|sep)$/;
     }
   }
@@ -179,7 +190,7 @@ sub _check_params
     if ((exists $value->{sets}) && ($self->{_type} == 0));
 
   return $self->{_error} = "Illegal type '$self->{_type}'"
-   if (($self->{_type} != 0) && ($self->{_type} != 1)); 
+   if (($self->{_type} < 0) || ($self->{_type} > 2)); 
 
   return $self->{_error} =
    "Illegal combination of type '$self->{_type}' and order '$self->{_order}'"
@@ -207,7 +218,7 @@ sub _check_params
   return $self->{_error} = 'Maxlen is smaller than minlen!'
    if ($self->{_minlen} > $self->{_maxlen});
 
-  return $value;
+  $value;
   }
 
 sub _initialize
@@ -231,7 +242,7 @@ sub _initialize
     foreach (@{$self->{_start}})
       {
       $self->{_error} = "Illegal char '$_', length not $self->{_clen}"
-       if length($_) != $self->{_clen};
+       if CORE::length($_) != $self->{_clen};
       }
     }
   # initialize array of counts for len of 0..1
@@ -255,7 +266,7 @@ sub _initialize
   return $self->{_error} = "Empty charset!"
    if ($self->{_cnum}->is_zero() && $self->{_minlen} > 0);
 
-  return $self;
+  $self;
   }
 
 sub zero
@@ -272,7 +283,7 @@ sub zero
   while ($self->class($i) == 0) { $i++; }
   $self->{_minlen} = $i;				# adjust minlen
   $self->{_zero} = $self->first($i);
-  return $self->{_zero};
+  $self->{_zero};
   }
 
 sub one
@@ -286,7 +297,7 @@ sub one
   my $i = $self->{_minlen};
   while ($self->class($i) == 0) { $i++; }
   $self->{_minlen} = $i;				# adjust minlen
-  return $self->first($i)->next();
+  $self->first($i)->next();
   }
 
 sub count
@@ -306,7 +317,7 @@ sub count
     {
     $count += $self->class($i);
     }
-  return $count;
+  $count;
   }
 
 sub dump
@@ -323,28 +334,28 @@ sub error
   {
   my $self = shift;
  
-  return $self->{_error};
+  $self->{_error};
   }
 
 sub order
   {
   # return charset's order/class
   my $self = shift;
-  return $self->{_order};
+  $self->{_order};
   }
 
 sub type
   {
   # return charset's type
   my $self = shift;
-  return $self->{_type};
+  $self->{_type};
   }
 
 sub charlen
   {
   # return charset's length of one character
   my $self = shift;
-  return $self->{_clen};
+  $self->{_clen};
   }
 
 sub length
@@ -352,7 +363,7 @@ sub length
   # return number of characters in charset
   my $self = shift;
 
-  return scalar @{$self->{_ones}};
+  scalar @{$self->{_ones}};
   }
 
 sub _calc
@@ -685,7 +696,9 @@ sub last
 
 sub next
   {
-  my $self = shift;
+  # take one string, and return the next string following it (without
+  # converting the string to it's number form first for speed reasons)
+  my $self = shift; 
   my $str = shift;
 
 # for timing disable it here:
@@ -711,12 +724,12 @@ sub next
   my $s = \$str->{_cache}->{str};
   if (defined $self->{_sep})
     {
-    # split last part and replace
+    # split last part
     $$s =~ /$self->{_sep}?(.*?)$/; $char = $1;
     }
   else  
     {
-    # extract last char and replace
+    # extract last char
     $char = substr($$s,-$clen,$clen);
     }
   $char = $self->{_map}->{$char};	# map is +1 by default
@@ -733,6 +746,7 @@ sub next
     }
   else
     {
+    # replace the last char
     substr($$s,-$clen,$clen) = $char;
     } 
   }
@@ -894,6 +908,8 @@ sub study
     }
   return $args;
   }
+
+__END__
 
 #############################################################################
 
@@ -2240,8 +2256,7 @@ None doscovered yet.
 If you use this module in one of your projects, then please email me. I want
 to hear about how my code helps you ;)
 
-This module is (C) Copyright by Tels http://bloodgate.com 2000-2001.
+This module is (C) Copyright by Tels http://bloodgate.com 2000-2003.
 
 =cut
 
-1;

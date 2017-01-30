@@ -18,40 +18,42 @@ use Math::String::Charset;
 $Math::String::Charset::die_on_error = 0;	# we better catch them
 my $a;
 
+my $c = 'Math::String::Charset';
+
 ###############################################################################
 # invalid input combinations
 
-$a = Math::String::Charset->new( { type => 2 } );
-ok ($a->error(),"Illegal type '2'");
+$a = $c->new( { type => 3 } );
+ok ($a->error(),"Illegal type '3'");
 
-$a = Math::String::Charset->new( { type => -1 } );
+$a = $c->new( { type => -1 } );
 ok ($a->error(),"Illegal type '-1'");
 
-$a = Math::String::Charset->new( { order => 2, type => 1 } );
+$a = $c->new( { order => 2, type => 1 } );
 ok ($a->error(),"Illegal combination of type '1' and order '2'");
 
-$a = Math::String::Charset->new( { order => 3, type => 0 } );
+$a = $c->new( { order => 3, type => 0 } );
 ok ($a->error(),"Illegal order '3'");
 
-$a = Math::String::Charset->new( { type => 0, sets => 'foo' } );
+$a = $c->new( { type => 0, sets => 'foo' } );
 ok ($a->error(),"Illegal type '0' used with 'sets'");
 
-$a = Math::String::Charset->new( { type => 1, bi => 'foo' } );
+$a = $c->new( { type => 1, bi => 'foo' } );
 ok ($a->error(),"Illegal type '1' used with 'bi'");
 
-$a = Math::String::Charset->new( { order => 1, type => 0, end => ' ' } );
+$a = $c->new( { order => 1, type => 0, end => ' ' } );
 ok ($a->error(),"Illegal combination of order '1' and 'end'");
 
-$a = Math::String::Charset->new( { charlen => 2, sep => 'a' } );
+$a = $c->new( { charlen => 2, sep => 'a' } );
 ok ($a->error(),"Can not have both 'sep' and 'charlen' in new()");
 
-$a = Math::String::Charset->new( { bi => {}, sets => 'b' } );
+$a = $c->new( { bi => {}, sets => 'b' } );
 ok ($a->error(),"Can not have both 'bi' and 'sets' in new()");
 
 ###############################################################################
 # simple charset's
 
-$a = Math::String::Charset->new( ['a'..'z'] );
+$a = $c->new( ['a'..'z'] );
 
 ok ($a->error(),"");
 
@@ -69,7 +71,7 @@ ok ($ok,0);
 
 ok ($a->length(),26);
 
-$a = Math::String::Charset->new( ['a'..'c'] );
+$a = $c->new( ['a'..'c'] );
 ok ($a->error(),"");
 ok ($a->length(),3);
 
@@ -145,7 +147,7 @@ ok ($a->map('c'),2);
 ok_undef ($a->map('d'));
 
 # check charlength
-$a = Math::String::Charset->new( ['a','b','foo','c'] );
+$a = $c->new( ['a','b','foo','c'] );
 if ($a->error() !~ /Illegal.*char.*length.*not/)
   {
   ok ($a->error(),"not '" . $a->error() . "'"); 
@@ -155,7 +157,7 @@ else
   ok (1,1);
   }
 
-$a = Math::String::Charset->new( ['foo','bar','baz'] );
+$a = $c->new( ['foo','bar','baz'] );
 ok ($a->error(),'');
 ok ($a->char(0),'foo');
 ok ($a->char(1),'bar');
@@ -183,13 +185,13 @@ ok ($a->is_valid('fuh'),0);
 ###############################################################################
 # first/last with sep char
 
-$a = Math::String::Charset->new( { start => ['a'..'z'], sep => '-' } );
+$a = $c->new( { start => ['a'..'z'], sep => '-' } );
 ok ($a->first(0),''); ok ($a->last (0),'');
 ok ($a->first(1),'a'); ok ($a->last (1),'z');
 ok ($a->first(2),'a-a'); ok ($a->last (2),'z-z');
 ok ($a->first(3),'a-a-a'); ok ($a->last (3),'z-z-z');
 
-$a = Math::String::Charset->new( { start => [qw/FOO BAR/], sep => '-' } );
+$a = $c->new( { start => [qw/FOO BAR/], sep => '-' } );
 ok ($a->first(0),''); ok ($a->last (0),'');
 ok ($a->first(1),'FOO'); ok ($a->last (1),'BAR');
 ok ($a->first(2),'FOO-FOO'); ok ($a->last (2),'BAR-BAR');
@@ -198,10 +200,10 @@ ok ($a->first(3),'FOO-FOO-FOO'); ok ($a->last (3),'BAR-BAR-BAR');
 ###############################################################################
 # min/max len
 
-$a = Math::String::Charset->new( { start => ['f','o','o'] } );
+$a = $c->new( { start => ['f','o','o'] } );
 ok ($a->error(),''); ok ($a->minlen(),'-inf'); ok ($a->maxlen(),'inf');
 
-$a = Math::String::Charset->new( { start => ['f','o','o'],
+$a = $c->new( { start => ['f','o','o'],
   minlen => 2, maxlen => 4, } );
 ok ($a->error(),''); ok ($a->minlen(),2);     ok ($a->maxlen(),4);
 ok ($a->is_valid('fooo'),1);
@@ -211,7 +213,7 @@ ok ($a->is_valid(''),0);			# 0 is smaller than minlen
 ok ($a->is_valid('f'),0);
 ok ($a->is_valid('fooof'),0);
 
-$a = Math::String::Charset->new( { start => ['f','o','o'],
+$a = $c->new( { start => ['f','o','o'],
   minlen => 2, maxlen => 1, } );
 ok ($a->error(),'Maxlen is smaller than minlen!');
 
@@ -220,7 +222,7 @@ ok ($a->error(),'Maxlen is smaller than minlen!');
 # simple charset's with sep char
 
 ok_undef ($a->{_sep});
-$a = Math::String::Charset->new( { start => ['hans','mag','blumen'],
+$a = $c->new( { start => ['hans','mag','blumen'],
    sep => ' ',} );
 ok ($a->{_sep},' ');
 ok ($a->{_order},1);
@@ -235,7 +237,7 @@ ok ($a->str2num(' hans mag blumen'),3+3*3+6);
 ok ($a->str2num('hans mag blumen '),3+3*3+6);
 ok ($a->str2num(' hans mag blumen '),3+3*3+6);
 
-$a = Math::String::Charset->new( { start => ['foooo','bar','buuh'], 
+$a = $c->new( { start => ['foooo','bar','buuh'], 
   sep => ' ',} );
 ok ($a->error(),"");
 
@@ -243,24 +245,24 @@ ok ($a->is_valid('foooo bar buuh'),1);
 ok ($a->is_valid('fooo bar buuh'),0);
 ok ($a->is_valid(' foooo bar buuh bar buuh '),1);
 
-$a = Math::String::Charset->new( { start => ['foo','bar'], sep => '',} );
+$a = $c->new( { start => ['foo','bar'], sep => '',} );
 ok ($a->error(),"Field 'sep' must not be empty");
 
 ###############################################################################
 # normalize
 
-$a = Math::String::Charset->new( { start => ['foo','bar'], sep => ' ',} );
+$a = $c->new( { start => ['foo','bar'], sep => ' ',} );
 ok ($a->norm(' foo bar '),'foo bar');
 ok ($a->norm('foo bar '), 'foo bar');
 ok ($a->norm(' foo bar'), 'foo bar');
 ok ($a->norm('foo bar'),  'foo bar');
-$a = Math::String::Charset->new( { start => ['foo','bar'],} );
+$a = $c->new( { start => ['foo','bar'],} );
 ok ($a->norm('foo bar baz'), 'foo bar baz');	# no check for validity
 
 ###############################################################################
 # map
 
-$a = Math::String::Charset->new( ['0'..'9'] );
+$a = $c->new( ['0'..'9'] );
 for ('0'..'9')
   {
   ok ($a->map($_),$_);
