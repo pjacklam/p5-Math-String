@@ -26,7 +26,7 @@ use Math::BigInt lib => 'GMP';	# prefer GMP
 use Math::String::Charset;
 use strict;
 use vars qw($VERSION $AUTOLOAD $accuracy $precision $div_scale $round_mode);
-$VERSION = '1.23';	# Current version of this package
+$VERSION = '1.24';	# Current version of this package
 require  5.005;		# requires this Perl version or later
 
 $accuracy   = undef;
@@ -76,11 +76,7 @@ sub from_number
     ref($set) eq 'HASH' || UNIVERSAL::isa($set,'Math::String::Charset'))
    )
     {
-    if (defined $set->{_scale})		# input is scaled?
-      {
-      # int(X / scale)
-      $self->bdiv($set->{_scale});
-      }
+    $self->bdiv($set->{_scale}) if defined $set->{_scale};  # input is scaled?
     }
   bless $self, $class;         					# rebless
   $self->_set_charset($set);
@@ -196,6 +192,8 @@ sub new
     $self = Math::BigInt->new($value->{num});	# number form
     bless $self, $class;			# rebless
     $self->_set_charset(shift);			# if given charset, copy over
+    $self->bdiv($self->{_set}->{_scale})
+      if defined $self->{_set}->{_scale};  # input is scaled?
     $self->{_cache}->{str} = $value->{str};	# string form
     }
   elsif (ref($value))
@@ -505,7 +503,7 @@ __END__
 
 =head1 NAME
 
-Math::String - Arbitrary sized integers having arbitrary charsets to calculate with password/key rooms.
+Math::String - Arbitrary sized integers having arbitrary charsets to calculate with key rooms
 
 =head1 SYNOPSIS
 

@@ -9,7 +9,7 @@ BEGIN
   chdir 't' if -d 't';
   unshift @INC, '../blib/arch';
   unshift @INC, '../lib';			# to run manually
-  plan tests => 200;
+  plan tests => 204;
   }
 
 use Math::String;
@@ -352,6 +352,20 @@ $x = Math::String::from_number(123,$cs); ok ($x->as_number(),123); ok ($x,'a');
 $x = Math::String::from_number(246,$cs); ok ($x->as_number(),246); ok ($x,'b');
 $x = Math::String::from_number(122,$cs); ok ($x->as_number(),0); ok ($x,'');
 $x = Math::String::from_number(124,$cs); ok ($x->as_number(),123); ok ($x,'a');
+
+# test that new() => "str, number" => new( str => ..., num => ...) works
+$x = Math::String->new('abc', $cs);
+my $str = $x->bstr();
+my $num = $x->as_number();
+$y = Math::String->new( { str => $x->bstr(), num => $x->as_number() }, $cs);
+
+ok ("$x","$y");
+ok ($x->as_number(),$y->as_number());
+
+$x->binc(); $y->binc();
+
+ok ("$x","$y");
+ok ($x->as_number(),$y->as_number());
 
 # all done
 

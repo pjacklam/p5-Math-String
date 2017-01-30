@@ -40,6 +40,8 @@ Math::String:
 2003-04-10 1.21: fixed: bug in UNIVERSAL::isa() call in from_number
 2003-04-22 1.22: prefer Math::BigInt::GMP on use
 2003-07-26 1.23: removed shebang line
+2003-12-11 1.24 Tels 599 tests
+  * new( { str => ..., num => ... } ) did not honour scale from charset
 
 ############################################################################## 
 Math::String::Charset:
