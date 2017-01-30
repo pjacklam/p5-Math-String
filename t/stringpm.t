@@ -8,7 +8,7 @@ BEGIN
   $| = 1;
   # chdir 't' if -d 't';
   unshift @INC, '../lib'; # to run manually
-  plan tests => 100;
+  plan tests => 105;
   }
 
 use Math::String;
@@ -210,6 +210,17 @@ ok_undef ($Math::String::accuracy);
 ok_undef ($Math::String::precision);
 ok ($Math::String::fallback,40);
 ok ($Math::String::rnd_mode,'even');
+
+##############################################################################
+# new( { str => 'aaa', num => 123 } );
+
+$x = Math::String->new ( { str => 'aaa', num => 123 } );
+ok ($x,'aaa'); ok ($x->as_number(),123);
+# invalid matching string form is updated
+$x++; ok ($x->as_number(),124); ok ($x,'dt'); 
+
+# check error()
+$x = Math::String->new ( { str => 'aaa', num => 123 } ); ok ($x->error(),'');
 
 # all done
 

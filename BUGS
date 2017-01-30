@@ -2,7 +2,6 @@
 Known bugs:
 
 * General:
-  + Does not yet properly handle +inf, -inf in math operations
   + divide by zero throws no exception
 
 * Math::String

@@ -16,7 +16,7 @@ use base Exporter;
 @EXPORT_OK = qw/SIMPLE/;
 
 use vars qw($VERSION);
-$VERSION = 1.08;	# Current version of this package
+$VERSION = 1.09;	# Current version of this package
 require  5.005;		# requires this Perl version or later
 
 use strict;
@@ -519,7 +519,7 @@ sub num2str
       {
       #print "bfore:  y/fac: $y / $j \n";
       ($y,$mod) = $y->bdiv($j);
-      $es = $self->{_ones}->[$mod->{value}->[0]] . $s.$es;
+      $es = $self->{_ones}->[$mod] . $s.$es;
       #print "after:  div: $y rem: $mod \n";
       $digits --;				# one digit done
       }

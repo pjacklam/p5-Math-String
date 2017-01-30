@@ -32,7 +32,7 @@ use Math::BigInt;
 use Math::String::Charset;
 use strict;
 use vars qw($VERSION $AUTOLOAD $accuracy $precision $fallback $rnd_mode);
-$VERSION = 1.13;    # Current version of this package
+$VERSION = 1.14;    # Current version of this package
 require  5.005;     # requires this Perl version or later
 
 $accuracy = undef;
@@ -47,7 +47,6 @@ use overload
 # can modify arg of ++ and --, so avoid a new-copy for speed
 '++'    =>      sub { Math::BigInt::badd($_[0],Math::BigInt->bone()) },
 '--'    =>      sub { Math::BigInt::badd($_[0],Math::BigInt->bone('-')) },
-
 ;         
 
 # some shortcuts for easier life
@@ -60,42 +59,15 @@ sub string
 sub from_number
   {
   # turn an integer into a string object
-  # catch Math::String->from_number and make it work
+  # catches also Math::String->from_number and make it work
   my $val = shift; 
 
-  # if ref to self, simple copy us to the value
-  if (ref $val)
-    {
-    #my $self;
-    #print "bstring bzero: $self $_[0]\n";
-    #$self = $val; $self = $_[0]->copy();
-    #print "$self\n";
-    #return $self = $val->copy();
-    my $self = $val; $val = shift;
-    $val = Math::BigInt->new($val) unless ref $val =~ /Math::BigInt/;
-    foreach my $k (keys %$val)
-      {
-      if (ref($val->{$k}) eq 'ARRAY') 
-        {
-        $self->{$k} = [ @{$val->{$k}} ];
-        }
-      else
-        {
-        $self->{$k} = $val->{$k};
-        }
-      }
-    #print "$self $val\n";
-    }
-  else
-    {
-    $val = "" if !defined $val;
-    $val = shift if !ref($val) && $val eq $class;
-    #$val = shift if $val eq $class;
-    my $self = Math::BigInt->new($val);
-    bless $self, $class;         # rebless
-    $self->_set_charset(shift);
-    return $self; 
-    }
+  $val = "" if !defined $val;
+  $val = shift if !ref($val) && $val eq $class;
+  my $self = Math::BigInt->new($val);
+  bless $self, $class;         # rebless
+  $self->_set_charset(shift);
+  return $self; 
   }
 
 sub bzero
@@ -172,18 +144,25 @@ sub new
 
   my $self = {};
   #print "$class new($value)\n";
-  if (ref($value))
+  if (ref($value) eq 'HASH')
     {
-    $self = $value->copy(); 		# got an object, so make copy
-    bless $self, $class;		# rebless
-    $self->_set_charset(shift);		# if given charset, copy over
+    $self = Math::BigInt->new($value->{num});	# number form
+    bless $self, $class;			# rebless
+    $self->_set_charset(shift);			# if given charset, copy over
+    $self->{_cache}->{str} = $value->{str};	# string form
+    }
+  elsif (ref($value))
+    {
+    $self = $value->copy(); 			# got an object, so make copy
+    bless $self, $class;			# rebless
+    $self->_set_charset(shift);			# if given charset, copy over
     $self->{_cache} = undef;
     }
   else
     {
     #print "non ref new\n";
     bless $self, $class;
-    $self->_set_charset(shift);
+    $self->_set_charset(shift);			# if given charset, copy over
     $self->_initialize($value);
     #print "result of new $self\n";
     }
@@ -257,7 +236,8 @@ sub bstr
   my $int = Math::BigInt::bzero();
   # $int->{sign} = '+';
   $int->{value} = $x->{value};
-  return $x->{_set}->num2str($int);
+  $x->{_cache}->{str} = $x->{_set}->num2str($int);
+  return $x->{_cache}->{str};
   }
 
 sub as_number
