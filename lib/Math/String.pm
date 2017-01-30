@@ -18,7 +18,7 @@ package Math::String;
 my $class = "Math::String";
 
 use Exporter;
-use Math::BigInt;
+use Math::BigInt lib => 'GMP';
 @ISA = qw(Exporter Math::BigInt);
 @EXPORT_OK = qw(
    as_number last first string from_number bzero bone binf bnan
@@ -26,7 +26,7 @@ use Math::BigInt;
 use Math::String::Charset;
 use strict;
 use vars qw($VERSION $AUTOLOAD $accuracy $precision $div_scale $round_mode);
-$VERSION = '1.25';	# Current version of this package
+$VERSION = '1.26';	# Current version of this package
 require  5.008003;	# requires this Perl version or later
 
 $accuracy   = undef;
@@ -48,12 +48,13 @@ use overload
 ;         
 
 my $CALC;
- 
+
 BEGIN
   {
-  $CALC = Math::BigInt->config()->{lib};
+  # this will fail if Math::BigInt is loaded afterwards with a different lib!
+  $CALC = Math::BigInt->config()->{lib} || 'Math::BigInt::Calc';
   }
-
+ 
 sub string
   {
   # exportable version of new

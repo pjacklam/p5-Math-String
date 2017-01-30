@@ -18,7 +18,7 @@ $VERSION = '1.16';	# Current version of this package
 require  5.005;		# requires this Perl version or later
 
 use strict;
-use Math::BigInt;
+use Math::BigInt lib => 'GMP';
 
 use vars qw/$die_on_error $CALC/;
 $die_on_error = 1;		# set to 0 to not die
@@ -53,6 +53,7 @@ my $ONE = Math::BigInt->bone();
 
 BEGIN
   {
+  # this will fail if Math::BigInt is loaded with a different lib afterwards!
   $CALC = Math::BigInt->config()->{lib} || 'Math::BigInt::Calc';
   }
 
@@ -678,7 +679,15 @@ sub str2num
     return $int;
     }
 
-  my $j = $self->{_cnum}->{value};		# positive
+  my $cnum = $self->{_cnum}; my $j;
+  if (ref($cnum))
+    {
+    $j = $cnum->{value};		
+    }
+  else
+    {
+    $j = $CALC->_new($cnum);
+    }
 
   if (!defined $self->{_sep})
     {

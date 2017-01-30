@@ -50,6 +50,8 @@ Math::String:
       faster since a hash lookup for ->{str} is no longer necessary
   * bstr() for uncached strings with SIMPLE charset is now about twice as fast
   * copy() is about 16% faster (due to simpler cache and streamlining)
+2004-11-20 1.26 Tels 662 tests
+  * avoid caching wrong $CALC - load GMP rightaway
 
 ############################################################################## 
 Math::String::Charset:
