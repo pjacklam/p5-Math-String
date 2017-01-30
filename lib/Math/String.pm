@@ -29,7 +29,7 @@ use Math::BigInt;
 use Math::String::Charset;
 use strict;
 use vars qw($VERSION $AUTOLOAD $accuracy $precision $div_scale $round_mode);
-$VERSION = '1.20';	# Current version of this package
+$VERSION = '1.21';	# Current version of this package
 require  5.005;		# requires this Perl version or later
 
 $accuracy   = undef;
@@ -76,10 +76,14 @@ sub from_number
   # make a new bigint (or copy the existing one)
   my $self = Math::BigInt->new($val);
   if (ref($set) && (
-    ref($set) eq 'HASH' || UNIVERSAL::isa('Math::String::Charset',$set))
+    ref($set) eq 'HASH' || UNIVERSAL::isa($set,'Math::String::Charset'))
    )
     {
-    $self->bmul($set->{_scale}) if defined $set->{_scale};	# scale it?
+    if (defined $set->{_scale})		# input is scaled?
+      {
+      # int(X / scale)
+      $self->bdiv($set->{_scale});
+      }
     }
   bless $self, $class;         					# rebless
   $self->_set_charset($set);
