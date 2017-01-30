@@ -1,6 +1,8 @@
-This lists only the changes for the current release (v1.17) over the last
+This lists only the changes for the current release (v1.18) over the last
 version, since HISTORY is now quite big:
 
-* fixed two bugs that causes unnecc. debug output
-* _core_lib => config()->{lib}
+# v1.16 was about 15% slower on (while $x++ < $e) loops. This version
+  fixed binc() and bdec(), so that it is now about factor 4 faster. This means
+  the loop above is now about twice as fast ;)
+* as_number() is now about factor 2 faster
 

@@ -9,7 +9,7 @@ BEGIN
   {
   $| = 1;
   unshift @INC, '../lib'; # to run manually
-  # chdir 't' if -d 't';
+  chdir 't' if -d 't';
   plan tests => 22;
   }
 

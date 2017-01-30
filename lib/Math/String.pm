@@ -29,7 +29,7 @@ use Math::BigInt;
 use Math::String::Charset;
 use strict;
 use vars qw($VERSION $AUTOLOAD $accuracy $precision $div_scale $round_mode);
-$VERSION = 1.17;    # Current version of this package
+$VERSION = 1.18;    # Current version of this package
 require  5.005;     # requires this Perl version or later
 
 $accuracy   = undef;
@@ -212,15 +212,10 @@ sub _set_charset
   my $self = shift;
   my $cs = shift;
 
-#  print "set charset ",$cs||'undef'," ",caller(),"\n";
   $cs = ['a'..'z'] if !defined $cs;		# default a-z
-#  print "set charset @$cs\n" if ref($cs) eq 'ARRAY';
   $cs = Math::String::Charset->new( $cs ) if ref($cs) =~ /^(ARRAY|HASH)$/;
-#  print "charset $cs\n";
-#  $cs->dump();
   die "charset '$cs' is not a reference" unless ref($cs);
   $self->{_set} = $cs;
-#  print "charset set\n";
   return $self;
   }
 
@@ -358,10 +353,17 @@ sub bstr
 
 sub as_number
   {
+  # return yourself as MBI
   my $self = shift;
 
-  # return yourself as MBI
-  return Math::BigInt->new($self->SUPER::bstr());
+  # old slow way:  return Math::BigInt->new($self->SUPER::bstr());
+
+  # make a copy of us and delete any specifiy (non-MBI) keys
+  my $x = $self->copy();
+  delete $x->{_cache}; 
+  delete $x->{_set};
+  bless $x, 'Math::BigInt';	# convert it to the new religion 
+  $x;
   }
 
 sub order
@@ -429,38 +431,35 @@ sub is_valid
 
 sub binc
   {
-  my ($self,$x,$a,$p,$r) = Math::BigInt::objectify(1,@_);
+  my ($self,$x,$a,$p,$r) = ref($_[0]) ? 
+   (ref($_[0]),@_) : (Math::BigInt::objectify(1,@_));
   
-  # badd calls modify, and thus destroys the cache, so store it
+  # binc calls modify, and thus destroys the cache, so store it
   my $str = $x->{_cache}->{str};
+  $x->SUPER::binc();
 
-#  print "$self cached $str ",$a||'undef'," ",$p||'undef',"\n";
-  $x->badd(Math::BigInt->bone())->round($a,$p,$r);
-
-#  print "cached $str\n";
-  
   # if old value cached and no rounding happens
  if ((defined $str) 
 #   && (!defined $a) && (!defined $p) 
 #   && (!defined $x->accuracy()) && (!defined $x->precision())
    )
     {
-#    print "caching $str\n";
     $x->{_cache}->{str} = $str;		# restore cache	
     $x->{_set}->next($x);		# update string cache
-#    print "caching ",$x->{_cache}->{str}||'undef',"\n";
     }
-  return $x;
+  $x;
   }
 
 sub bdec
   {
-  my ($self,$x,$a,$p,$r) = Math::BigInt::objectify(1,@_);
+  my ($self,$x,$a,$p,$r) = ref($_[0]) ? 
+   (ref($_[0]),@_) : (Math::BigInt::objectify(1,@_));
+  #my ($self,$x,$a,$p,$r) = Math::BigInt::objectify(1,@_);
  
-  # badd calls modify, and thus destroys the cache, so store it
+  # bdec calls modify, and thus destroys the cache, so store it
   my $str = $x->{_cache}->{str};
 
-  $x->bsub(Math::BigInt->bone())->round($a,$p,$r);
+  $x->SUPER::bdec();
 
   # if old value cached and no rounding happens
   if ((defined $str) 
@@ -470,9 +469,8 @@ sub bdec
     {
     $x->{_cache}->{str} = $str;		# restore cache	
     $x->{_set}->prev($x);		# update string cache
-#    print "caching ",$x->{_cache}->{str}||'undef',"\n";
     }
-  return $x;
+  $x;
   }
 
 #############################################################################
@@ -480,10 +478,9 @@ sub bdec
 
 sub modify
   {
-  my $self = shift;
   # invalidate cache if $self is going to be modified
-  $self->{_cache} = undef;	# faster than = {}
-  return 0;	# go ahead, modify
+  $_[0]->{_cache} = undef;	# faster than = {}
+  0;				# go ahead, modify
   }
 
 #############################################################################
