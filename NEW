@@ -1,0 +1,5 @@
+This lists only the changes for the current release (v1.12) over the last
+version, since HISTORY is now quite big:
+
+* Split Math::Big into Math::BigInt, Math::Big and Math::String
+
