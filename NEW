@@ -1,5 +1,9 @@
 This lists only the changes for the current release (v1.12) over the last
 version, since HISTORY is now quite big:
 
-* Split Math::Big into Math::BigInt, Math::Big and Math::String
+* fixed bzero() for $x->bzero() case (Math::String::bzero() did work)
+* added bnan() and binf()
+* there were no tests for bzero(), bnan() and binf()
+* fixed bug in from_number() that did not copy all values form BigInt (due to
+  new Math::BigInt::Calc $x->{value} might not be an ARRAY any longer)
 

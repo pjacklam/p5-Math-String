@@ -2,11 +2,9 @@ Math with strings that are represented by big integers
 
 (C) ..--- ----- ----- .---- by - . .-.. ... .-.-.-  All rights reserved.
 
-To test, untar, unzip and then run
+See INSTALL onhow to unpack and install this package.
 
-	perl Makefile.PL
-	make
-	make test
+You will very likely need newer versions of Math::BigInt and Math::BigFloat.
 
 See also ./examples for some example scripts.
 
