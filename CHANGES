@@ -39,6 +39,7 @@ Math::String:
 		 as_number() uses _scale to scale output
 2003-04-10 1.21: fixed: bug in UNIVERSAL::isa() call in from_number
 2003-04-22 1.22: prefer Math::BigInt::GMP on use
+2003-07-26 1.23: removed shebang line
 
 ############################################################################## 
 Math::String::Charset:
@@ -87,6 +88,9 @@ Math::String::Charset:
 2003-04-22 1.14: fix for scale not beeing a legal parameter to new()
 		 prefer Math::BigInt::GMP on use
 		 added method copy()
+2003-07-26 1.15: require Math::String::Charset::Wordlist vs. use
+		 added lib => 'GMP'
+		 removed shebang line
 
 ############################################################################## 
 Math::String::Charset::Grouped:
@@ -94,6 +98,8 @@ Math::String::Charset::Grouped:
 2000-10-25 0.02: fixed bugs, added sep char support
 2003-02-06 0.03: added __END__ marker for faster loading
 2003-04-14 0.04: fix for scale not beeing a legal parameter to new()
+2003-07-26 0.05: added lib => 'GMP'
+		 removed shebang line
 
 ############################################################################## 
 Math::String::Charset::Nested:
@@ -102,6 +108,8 @@ Math::String::Charset::Nested:
 		 class() was wrong for bi-grams (with some start sets)
 2003-02-06 0.02: added __END__ marker for faster loading
 2003-04-14 0.03: fix for scale not beeing a legal parameter to new()
+2003-07-26 0.04: added lib => 'GMP'
+		 removed shebang line
 
 ############################################################################## 
 Math::String::Charset::Wordlist was moved into it's own distribution
@@ -114,3 +122,5 @@ Math::String::Sequence:
 2001-04-21 1.02 added: as_array for 'a'..'z' emulation
 2003-02-06 1.03 added __END__ marker for faster loading
 		fixed a potential problem in as_array()
+2003-07-26 1.04 added lib => 'GMP'
+		removed shebang line
