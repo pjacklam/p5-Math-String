@@ -32,7 +32,7 @@ use Math::BigInt;
 use Math::String::Charset;
 use strict;
 use vars qw($VERSION $AUTOLOAD $accuracy $precision $fallback $rnd_mode);
-$VERSION = 1.12;    # Current version of this package
+$VERSION = 1.13;    # Current version of this package
 require  5.005;     # requires this Perl version or later
 
 $accuracy = undef;
@@ -45,8 +45,8 @@ use overload
               $_[1] cmp Math::String::bstr($_[0]) :
               Math::String::bstr($_[0]) cmp $_[1] },
 # can modify arg of ++ and --, so avoid a new-copy for speed
-'++'    =>      sub { Math::BigInt::badd($_[0],Math::BigInt->_one()) },
-'--'    =>      sub { Math::BigInt::badd($_[0],Math::BigInt->_one('-')) },
+'++'    =>      sub { Math::BigInt::badd($_[0],Math::BigInt->bone()) },
+'--'    =>      sub { Math::BigInt::badd($_[0],Math::BigInt->bone('-')) },
 
 ;         
 
@@ -174,7 +174,6 @@ sub new
   #print "$class new($value)\n";
   if (ref($value))
     {
-    #print "new from ref: ",ref($value),"\n";
     $self = $value->copy(); 		# got an object, so make copy
     bless $self, $class;		# rebless
     $self->_set_charset(shift);		# if given charset, copy over
