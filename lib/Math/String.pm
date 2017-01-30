@@ -2,7 +2,7 @@
 # Math/String.pm -- package which defines a base class for calculating
 # with big integers that are defined by arbitrary char sets.
 #
-# Copyright (C) 1999 - 2005 by Tels.
+# Copyright (C) 1999 - 2008 by Tels.
 #############################################################################
 
 # see:
@@ -26,8 +26,8 @@ use Math::BigInt;
 use Math::String::Charset;
 use strict;
 use vars qw($VERSION $AUTOLOAD $accuracy $precision $div_scale $round_mode);
-$VERSION = '1.27';	# Current version of this package
-require  5.008003;	# requires this Perl version or later
+$VERSION = '1.28';	# Current version of this package
+require 5.008003;	# requires this Perl version or later
 
 $accuracy   = undef;
 $precision  = undef;
