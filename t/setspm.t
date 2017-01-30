@@ -10,7 +10,7 @@ BEGIN
   $| = 1;
   unshift @INC, '../lib'; # to run manually
   chdir 't' if -d 't';
-  plan tests => 150;
+  plan tests => 155;
   }
 
 use Math::String::Charset;
@@ -267,6 +267,22 @@ for ('0'..'9')
   {
   ok ($a->map($_),$_);
   }
+
+###############################################################################
+# scale
+
+$a = $c->new( { start => ['a'..'z'], scale => 2 } );
+ok ($a->error(),"");
+ok ($a->scale(),2);
+
+###############################################################################
+# copy
+
+$b = $a->copy();
+
+ok (ref($b), $c);
+ok ($b->error(),"");
+ok ($b->isa('Math::String::Charset'));
 
 ###############################################################################
 # Perl 5.005 does not like ok ($x,undef)

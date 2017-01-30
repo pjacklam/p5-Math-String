@@ -15,7 +15,7 @@ package Math::String::Charset::Nested;
 use base Math::String::Charset;
 
 use vars qw($VERSION);
-$VERSION = 0.02;	# Current version of this package
+$VERSION = 0.03;	# Current version of this package
 require  5.005;		# requires this Perl version or later
 
 use strict;
@@ -39,6 +39,7 @@ $die_on_error = 1;		# set to 0 to not die
 # _cnum  : number of characters in _ones as BigInt (for speed)
 # _minlen: minimum string length (anything shorter is invalid), default 0
 # _maxlen: maximum string length (anything longer is invalid), default undef
+# _scale : optional input/output scale
 
 # simple ones:
 # _sep  : separator string (undef for none)
@@ -67,7 +68,7 @@ sub _strict_check
   foreach my $key (keys %$value)
     {
     return $self->{_error} = "Illegal parameter '$key' for $class"
-      if $key !~ /^(start|minlen|maxlen|sep|bi|end|charlen)$/;
+      if $key !~ /^(start|minlen|maxlen|sep|bi|end|charlen|scale)$/;
     }
   }
 

@@ -38,6 +38,7 @@ Math::String:
 2003-04-07 1.20: added: scale()
 		 as_number() uses _scale to scale output
 2003-04-10 1.21: fixed: bug in UNIVERSAL::isa() call in from_number
+2003-04-22 1.22: prefer Math::BigInt::GMP on use
 
 ############################################################################## 
 Math::String::Charset:
@@ -82,12 +83,17 @@ Math::String::Charset:
 			 now works for the "hocuspocus" example
 			 tests are now in seperate file 
 2003-02-06 1.12: added __END__ marker for faster loading
+2003-04-10 1.13: added scale() and scale as parameter to new()
+2003-04-22 1.14: fix for scale not beeing a legal parameter to new()
+		 prefer Math::BigInt::GMP on use
+		 added method copy()
 
 ############################################################################## 
 Math::String::Charset::Grouped:
 2000-09-20 0.01: first version from Charset
 2000-10-25 0.02: fixed bugs, added sep char support
 2003-02-06 0.03: added __END__ marker for faster loading
+2003-04-14 0.04: fix for scale not beeing a legal parameter to new()
 
 ############################################################################## 
 Math::String::Charset::Nested:
@@ -95,10 +101,10 @@ Math::String::Charset::Nested:
 		 fixed: bi-gram chars w/o followers can't be in _start
 		 class() was wrong for bi-grams (with some start sets)
 2003-02-06 0.02: added __END__ marker for faster loading
+2003-04-14 0.03: fix for scale not beeing a legal parameter to new()
 
 ############################################################################## 
-Math::String::Charset::Wordlist
-2003-02-06 0.01: first version
+Math::String::Charset::Wordlist was moved into it's own distribution
 
 ############################################################################## 
 Math::String::Sequence:

@@ -16,11 +16,11 @@ BEGIN
   }
 
 use vars qw($VERSION);
-$VERSION = 1.13;	# Current version of this package
+$VERSION = 1.14;	# Current version of this package
 require  5.005;		# requires this Perl version or later
 
 use strict;
-use Math::BigInt;
+use Math::BigInt lib => 'GMP';	# prefer GMP
 
 use vars qw/$die_on_error/; 
 $die_on_error = 1;		# set to 0 to not die
@@ -63,6 +63,7 @@ use Math::String::Charset::Wordlist;
 # _order    : = 1
 # _type     : = 3
 # _file     : dictionary file
+# _list     : tied object
 # _stages   : stages (1,2,3)
 # _mutations: mutations (1..1023) 
 
@@ -143,7 +144,7 @@ sub _strict_check
   foreach my $key (keys %$value)
     {
     return $self->{_error} = "Illegal parameter '$key' for $class"
-      if $key !~ /^(start|minlen|maxlen|sep)$/;
+      if $key !~ /^(start|minlen|maxlen|sep|scale)$/;
     }
   }
 
@@ -310,6 +311,55 @@ sub one
   while ($self->class($i) == 0) { $i++; }
   $self->{_minlen} = $i;				# adjust minlen
   $self->first($i)->next();
+  }
+
+sub copy
+  {
+  # for speed reasons, do not make a copy of a charset, but share it instead
+  my ($c,$x);
+  if (@_ > 1)
+    {
+    # if two arguments, the first one is the class to "swallow" subclasses
+    ($c,$x) = @_;
+    }
+  else
+    {
+    $x = shift;
+    $c = ref($x);
+    }
+  return unless ref($x); # only for objects
+
+  my $self = {}; bless $self,$c;
+  foreach my $k (keys %$x)
+    {
+    if (ref($x->{$k}) eq 'SCALAR')
+      {
+      $self->{$k} = \${$x->{$k}};
+      }
+    elsif (ref($x->{$k}) eq 'ARRAY')
+      {
+      $self->{$k} = [ @{$x->{$k}} ];
+      }
+    elsif (ref($x->{$k}) eq 'HASH')
+      {
+      # only one level deep!
+      foreach my $h (keys %{$x->{$k}})
+        {
+        $self->{$k}->{$h} = $x->{$k}->{$h};
+        }
+      }
+    elsif (ref($x->{$k}))
+      {
+      my $c = ref($x->{$k});
+      $self->{$k} = $c->new($x->{$k});  # no copy() due to deep rec
+      }
+    else
+      {
+      # simple scalar w/o reference
+      $self->{$k} = $x->{$k};
+      }
+    }
+  $self;
   }
 
 sub count
@@ -1831,6 +1881,12 @@ Must be longer than a (possible defined) minlen. If not given is set to +inf.
 Optional input/output scale. See L<scale()>.
 
 =back
+
+=head2 B<copy()>
+
+	$copy = $charset->copy();
+
+Create a new charset as a copy from an existing one.
 
 =head2 B<scale()>
 

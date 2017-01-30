@@ -21,15 +21,14 @@ package Math::String;
 my $class = "Math::String";
 
 use Exporter;
-use Math::BigInt;
+use Math::BigInt lib => 'GMP';	# prefer GMP
 @ISA = qw(Exporter Math::BigInt);
 @EXPORT_OK = qw( as_number last first string from_number bzero bone binf bnan
                );
-#@EXPORT = qw( );
 use Math::String::Charset;
 use strict;
 use vars qw($VERSION $AUTOLOAD $accuracy $precision $div_scale $round_mode);
-$VERSION = '1.21';	# Current version of this package
+$VERSION = '1.22';	# Current version of this package
 require  5.005;		# requires this Perl version or later
 
 $accuracy   = undef;
