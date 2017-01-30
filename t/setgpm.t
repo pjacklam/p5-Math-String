@@ -10,7 +10,7 @@ BEGIN
   $| = 1;
   unshift @INC, '../lib'; # to run manually
   chdir 't' if -d 't';
-  plan tests => 88;
+  plan tests => 94;
   }
 
 use Math::String::Charset;
@@ -24,6 +24,8 @@ my $a;
 ###############################################################################
 # grouped charsets
 
+my $c = 'Math::String::Charset::Grouped';
+
 $a = Math::String::Charset->new( { sets => 
   { 
    0 => ['a'..'f'],
@@ -33,7 +35,7 @@ $a = Math::String::Charset->new( { sets =>
 
 ok ($a->error(),"");
 ok ($a->isa('Math::String::Charset'));
-ok (ref($a),'Math::String::Charset::Grouped');
+ok (ref($a),$c);
 ok ($a->error(),"");
 
 ok ($a->order(),1); ok ($a->type(),1);
@@ -120,7 +122,7 @@ my $sets = { 0 => ['a'..'z'], };
 $a = Math::String::Charset->new( { sets => $sets, start => [ 'a' .. 'z' ], } );
 ok ($a->error(),"");
 ok ($a->isa('Math::String::Charset'));
-ok (ref($a),'Math::String::Charset::Grouped');
+ok (ref($a),$c);
 ok (scalar keys %$sets,1);
 
 ###############################################################################
@@ -178,6 +180,29 @@ ok ($a->error(),'');
 
 $a = eval '$a->is_valid("Z a a 99");';
 ok ($a,1);
+
+###############################################################################
+# scale
+
+$a = Math::String::Charset->new( { sets =>
+  {
+   0 => ['a'..'f'],
+   1 => ['A'..'Z'],
+  -1 => ['0'..'9'],
+  },
+  scale => 2 } );
+ok ($a->error(),"");
+ok ($a->scale(),2);
+
+###############################################################################
+# copy
+
+$b = $a->copy();
+
+ok (ref($b), $c);
+ok ($b->error(),"");
+ok ($b->isa('Math::String::Charset'));
+ok ($b->isa($c));
 
 ###############################################################################
 # Perl 5.005 does not like ok ($x,undef)

@@ -10,7 +10,7 @@ BEGIN
   $| = 1;
   unshift @INC, '../lib'; # to run manually
   chdir 't' if -d 't';
-  plan tests =>87;
+  plan tests => 93;
   }
 
 use Math::String::Charset;
@@ -22,6 +22,8 @@ my $a;
 
 ###############################################################################
 # some valid input combinations via Charset, and the same directly
+
+my $c = 'Math::String::Charset::Nested';
 
 for my $c (qw/ Math::String::Charset Math::String::Charset::Nested/)
   {
@@ -65,7 +67,7 @@ $a = Math::String::Charset->new( {
   } );
 ok ($a->error(),"");
 ok ($a->isa('Math::String::Charset'));
-ok (ref($a),'Math::String::Charset::Nested');
+ok (ref($a),$c);
 
 ok ($a->class(1),4); 			# b,c,a,q
 
@@ -239,7 +241,7 @@ $a = Math::String::Charset->new( {
       },
     end => [ 'a', 'b', 'c', 'j' ],
   } );
-ok (ref($a),'Math::String::Charset::Nested');
+ok (ref($a),$c);
 ok ($a->isa('Math::String::Charset'));
 ok ($a->error(),"");
 ok (join(' ',$a->ones()),'b c a');
@@ -294,6 +296,32 @@ ok_undef ($a->first(6));
 # normalize (no-op)
 
 ok ($a->norm('hocus'),'hocus');
+
+###############################################################################
+# scale
+
+$a = $c->new( { 
+  start => ['b','c','a','i'],
+  bi => {
+      'a' => [ 'q', 'j', 'b' ],
+      'b' => [ 'c', 'b','j' ],
+      'c' => [ 'a', 'c', 'x' ],
+      'q' => [ ],
+      'j' => [ 'b' ],
+      },
+  scale => 2 } );
+ok ($a->error(),"");
+ok ($a->scale(),2);
+
+###############################################################################
+# copy
+
+$b = $a->copy();
+
+ok (ref($b), $c);
+ok ($b->error(),"");
+ok ($b->isa('Math::String::Charset'));
+ok ($b->isa($c));
                                        
 ###############################################################################
 # Perl 5.005 does not like ok ($x,undef)

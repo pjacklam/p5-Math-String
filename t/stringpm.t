@@ -7,7 +7,8 @@ BEGIN
   { 
   $| = 1;
   chdir 't' if -d 't';
-  unshift @INC, '../lib'; # to run manually
+  unshift @INC, '../blib/arch';
+  unshift @INC, '../lib';			# to run manually
   plan tests => 200;
   }
 
