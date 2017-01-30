@@ -15,10 +15,10 @@
 # mjd@plover.com
 
 # the following hash values are used
-# _set		: ref to charset object
-# sign, value	: from BigInt 
-# _cache	: hash, cache's the string-form and certain additional values
-#		: for faster bstr() and add/dec
+# _set			  : ref to charset object
+# sign, value, _a, _f, _p : from BigInt 
+# _cache		  : hash, cache's the string and certain other values
+#			  : for faster bstr() and add/dec
 
 package Math::String;
 my $class = "Math::String";
@@ -32,7 +32,7 @@ use Math::BigInt;
 use Math::String::Charset;
 use strict;
 use vars qw($VERSION $AUTOLOAD $accuracy $precision $fallback $rnd_mode);
-$VERSION = 1.11;    # Current version of this package
+$VERSION = 1.12;    # Current version of this package
 require  5.005;     # requires this Perl version or later
 
 $accuracy = undef;
@@ -66,6 +66,11 @@ sub from_number
   # if ref to self, simple copy us to the value
   if (ref $val)
     {
+    #my $self;
+    #print "bstring bzero: $self $_[0]\n";
+    #$self = $val; $self = $_[0]->copy();
+    #print "$self\n";
+    #return $self = $val->copy();
     my $self = $val; $val = shift;
     $val = Math::BigInt->new($val) unless ref $val =~ /Math::BigInt/;
     foreach my $k (keys %$val)
@@ -79,12 +84,13 @@ sub from_number
         $self->{$k} = $val->{$k};
         }
       }
+    #print "$self $val\n";
     }
   else
     {
     $val = "" if !defined $val;
     $val = shift if !ref($val) && $val eq $class;
-    $val = shift if $val eq $class;
+    #$val = shift if $val eq $class;
     my $self = Math::BigInt->new($val);
     bless $self, $class;         # rebless
     $self->_set_charset(shift);
@@ -94,8 +100,65 @@ sub from_number
 
 sub bzero
   {
-  # create a 0
-  return from_number(0);
+  my $self = shift;
+  if (defined $self)
+    {
+    # $x->bzero();	(x) (M::S)
+    # $x->bzero();	(x) (M::bi or something)
+    $self->SUPER::bzero();
+    bless $self, $class if ref($self) ne $class;         # convert aka rebless
+    }
+  else
+    {
+    # M::S::bzero();	()
+    $self = Math::BigInt::bzero();
+    bless $self, $class;
+    $self->_set_charset(shift);
+    }
+  $self->{_cache}->{str} = '';
+  return $self;
+  }
+
+sub bnan
+  {
+  my $self = shift;
+  if (defined $self)
+    {
+    # $x->bnan();	(x) (M::S)
+    # $x->bnan();	(x) (M::bi or something)
+    $self->SUPER::bnan();
+    bless $self, $class if ref($self) ne $class;         # convert aka rebless
+    }
+  else
+    {
+    # M::S::bnan();	()
+    $self = $class->SUPER::bnan();
+    bless $self, $class;
+    $self->_set_charset(shift);
+    }
+  $self->{_cache} = undef;
+  return $self;
+  }
+
+sub binf
+  {
+  my $self = shift;
+  if (defined $self)
+    {
+    # $x->bzero();	(x) (M::S)
+    # $x->bzero();	(x) (M::bi or something)
+    $self->SUPER::binf(shift);
+    bless $self, $class if ref($self) ne $class;         # convert aka rebless
+    }
+  else
+    {
+    # M::S::bzero();	()
+    $self = $class->SUPER::binf(shift);
+    bless $self, $class;
+    $self->_set_charset(shift);
+    }
+  $self->{_cache} = undef;
+  return $self;
   }
 
 ###############################################################################
@@ -106,11 +169,30 @@ sub new
   my $class = shift;
   $class = ref($class) || $class;
   my $value = shift; $value = '' if !defined $value;
+
   my $self = {};
-  bless $self, $class;
-  return $value->copy() if ref($value);	# got an object, so make copy
-  $self->_set_charset(shift);
-  $self->_initialize($value);
+  #print "$class new($value)\n";
+  if (ref($value))
+    {
+    #print "new from ref: ",ref($value),"\n";
+    $self = $value->copy(); 		# got an object, so make copy
+    bless $self, $class;		# rebless
+    $self->_set_charset(shift);		# if given charset, copy over
+    $self->{_cache} = undef;
+    }
+  else
+    {
+    #print "non ref new\n";
+    bless $self, $class;
+    $self->_set_charset(shift);
+    $self->_initialize($value);
+    #print "result of new $self\n";
+    }
+  #print "after new: ",ref($self),"\n";
+  #foreach (keys %$self)
+  #  {
+  #  print "new $_ => $self->{$_}\n";
+  #  }
   return $self; 
   }
 
@@ -120,6 +202,7 @@ sub _set_charset
   # first method should be prefered for speed/memory reasons
   my $self = shift;
   my $cs = shift;
+
   $cs = ['a'..'z'] if !defined $cs;		# default a-z
   $cs = Math::String::Charset->new( $cs ) if ref($cs) =~ /^(ARRAY|HASH)$/;
   die "charset '$cs' is not a reference" unless ref($cs);
@@ -144,7 +227,7 @@ sub _initialize
   foreach my $c (keys %$int) { $self->{$c} = $int->{$c}; }
   
   $self->{_cache}->{str} = $value;	# caching string form
-  #print "caching $value\n"; 
+  # print "caching $value\n"; 
   return $self;
   }
 
@@ -165,9 +248,9 @@ sub bstr
   {
   my $x = shift;
 
-  return $x unless ref $x;		# scalars get simple returned
-  return '' if $x->is_zero();		# short cut
-  return undef if $x->{sign} eq 'NaN';	# short cut
+  return $x unless ref $x;			# scalars get simple returned
+  return undef if $x->{sign} !~ /^[+-]$/;	# short cut
+  return '' if $x->is_zero();			# short cut
 
   return $x->{_cache}->{str} if defined $x->{_cache}->{str};
   # num2str needs (due to overloading "$x-1") a Math::BigInt object, so make it 
@@ -489,8 +572,9 @@ Return a string representing the internal number with the given charset.
 Since this omitts the sign, you can not distinguish between negative and 
 positiv values. Use C<as_number()> or C<sign()> if you need the sign.
 
-This returns undef for 'NaN', since with a charset of [ 'a', 'N' ] you would
-not be able to tell 'NaN' from true 'NaN'!
+This returns undef for 'NaN', since with a charset of
+[ 'a', 'N' ] you would not be able to tell 'NaN' from true 'NaN'!
+'+inf' or '-inf' return undef for the same reason.
 
 =head2 B<charset()>
 

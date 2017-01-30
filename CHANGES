@@ -17,6 +17,8 @@ Math::String:
 2001-04-13 1.09: as_number: returns now Math::BigInt
 2001-05-07 1.10: finally got rid of C&P of overload section
 2001-05-13 1.11: added accuracy/precision/fallback/rnd_mode and tests for this
+2001-07-08 1.12: added bnan(), binf(), fixed $x->bzero(), added test for these
+		 fixed bug in copy() code in from_number() 
 
 ############################################################################## 
 Math::String::Charset:

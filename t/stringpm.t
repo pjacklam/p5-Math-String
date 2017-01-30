@@ -8,34 +8,48 @@ BEGIN
   $| = 1;
   # chdir 't' if -d 't';
   unshift @INC, '../lib'; # to run manually
-  plan tests => 79;
+  plan tests => 100;
   }
 
 use Math::String;
 use Math::BigInt;
 
-my (@args,$try,$rc,$x,$y,$z,$i,$res);
+my (@args,$try,$rc,$x,$y,$z,$i);
 $| = 1;
 while (<DATA>) 
   {
   chop;
   @args = split(/:/,$_,99);
 
+  # print join(' ',@args),"\n";
   # test String => Number
-  $try = "\$x = Math::String->new('$args[0]', [ $args[1] ] )->as_number();";
-
+  $try = "\$x = Math::String->new('$args[0]', [ $args[1] ] )->bstr()";
   $rc = eval $try; 
 
   # stringify returns undef instead of NaN
-  $res = $args[2]; $res = undef if $args[2] eq 'NaN';
-  print "# For '$try'\n" if (!ok "$rc" , $args[2]);
+  if ($args[2] eq 'NaN')
+    {
+    print "# For '$try'\n" if (!ok_undef($rc));
+    }
+  else
+    {
+    print "# For '$try'\n" if (!ok "$rc" , $args[2]);
+    }
  
   # test Number => String
   next if $args[2] eq 'NaN'; # dont test NaNs reverse 
-  $try = "\$x = Math::String::from_number('$args[2]', [ $args[1] ]);";
+  $try = "\$x = Math::String::from_number('$args[3]', [ $args[1] ]);";
               
   $rc = eval $try;
   print "# For '$try'\n" if (!ok "$rc" , "$args[0]");
+  
+  # test output as_number()
+  if (defined $args[3])
+    {
+    $try = "\$x = Math::String->new('$args[0]', [ $args[1] ] )->as_number()";
+    $rc = eval $try; 
+    print "# For '$try'\n" if (!ok "$rc" , $args[3]);
+    }
 
   }
 close DATA;
@@ -167,6 +181,29 @@ $x = Math::String->new('abc');
 ok (ref($x->as_number()),'Math::BigInt');
 
 ##############################################################################
+# numify
+
+$x = Math::String->new('abc'); 
+ok (ref($x->numify()),''); ok ($x->numify(),731);
+
+##############################################################################
+# bzero, binf, bnan
+
+$x = Math::String->new('abc'); $x->bzero();
+ok (ref($x),'Math::String'); ok ($x,''); ok ($x->sign(),'+');
+$x = Math::String->new('abc'); $x->bnan();
+ok (ref($x),'Math::String'); ok_undef ($x->bstr()); ok ($x->sign(),'NaN');
+$x = Math::String->new('abc'); $x->binf();
+ok (ref($x),'Math::String'); ok_undef ($x->bstr()); ok ($x->sign(),'+inf');
+
+$x = Math::String::bzero(); 
+ok (ref($x),'Math::String'); ok ($x,''); ok ($x->sign(),'+');
+$x = Math::String::bnan();
+ok (ref($x),'Math::String'); ok_undef ($x->bstr()); ok ($x->sign(),'NaN');
+$x = Math::String::binf();
+ok (ref($x),'Math::String'); ok_undef ($x->bstr()); ok ($x->sign(),'+inf');
+
+##############################################################################
 # accuracy/precicison
 
 ok_undef ($Math::String::accuracy);
@@ -183,8 +220,9 @@ sub ok_undef
   {
   my $x = shift;
 
-  ok (1,1) and return if !defined $x;
+  ok (1,1) and return 1 if !defined $x;
   ok ($x,'undef');
+  return 0;
   }
 
 1;
@@ -192,4 +230,4 @@ sub ok_undef
 __DATA__
 abc:'0'..'9':NaN
 abc:'a'..'b':NaN
-abc:'a'..'c':18
+abc:'a'..'c':abc:18
