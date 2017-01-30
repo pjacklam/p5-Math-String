@@ -16,7 +16,7 @@ BEGIN
   }
 
 use vars qw($VERSION);
-$VERSION = 1.12;	# Current version of this package
+$VERSION = 1.13;	# Current version of this package
 require  5.005;		# requires this Perl version or later
 
 use strict;
@@ -46,6 +46,7 @@ use Math::String::Charset::Wordlist;
 # _cnum  : number of characters in _ones as BigInt (for speed)
 # _minlen: minimum string length (anything shorter is invalid), default -inf
 # _maxlen: maximum string length (anything longer is invalid), default undef
+# _scale : optional output/input scale
 
 # simple ones:
 # _sep  : separator string (undef for none)
@@ -168,6 +169,8 @@ sub _check_params
   $self->{_order} = $value->{order}; 
   $self->{_type} = $value->{type};
 
+  $self->{_scale} = $value->{scale} if exists $value->{scale};
+
   return $self->{_error} = "Can not have both 'bi' and 'sets' in new()"
     if ((exists $value->{sets}) && (exists $value->{bi}));
   
@@ -267,6 +270,14 @@ sub _initialize
    if ($self->{_cnum}->is_zero() && $self->{_minlen} > 0);
 
   $self;
+  }
+
+sub scale
+  {
+  my $self = shift;
+
+  $self->{_scale} = Math::BigInt->new($_[0]) if @_ > 0;
+  $self->{_scale};
   }
 
 sub zero
@@ -574,12 +585,12 @@ sub num2str
   # padd the remaining digits with the zero-symbol
   $es = ($self->{_ones}->[0].$s) x $digits . $es if ($digits > 0);
   $es =~ s/$s$//;				# strip last sep 'char'
-  return wantarray ? ($es,$d) : $es;
+  wantarray ? ($es,$d) : $es;
   }
 
 sub str2num
   {
-  # convert Math::String to Math::BigInt
+  # convert Math::String to Math::BigInt (does not take scale into account)
   my $self = shift;
   my $str = shift;			# simple string
 
@@ -589,7 +600,9 @@ sub str2num
   return $int if $i == 0;
   my $map = $self->{_map};
   my $clen = $self->{_clen} || 0;	# len of one char
-  return new Math::BigInt($map->{$str}) if $i == $clen;
+
+  return Math::BigInt->new($map->{$str}) if $i == $clen;
+
   my $j = $self->{_cnum};		# nr of chars as BigInt
   my $mul = $int+1; 			# 1
   if (!defined $self->{_sep})
@@ -616,7 +629,7 @@ sub str2num
       $mul *= $j;
       }
     }
-  return $int;
+  $int;
   }
 
 sub char
@@ -626,7 +639,7 @@ sub char
   my $char = shift || 0;
  
   return undef if $char > scalar @{$self->{_ones}}; # dont create spurios elems
-  return $self->{_ones}->[$char];
+  $self->{_ones}->[$char];
   }
 
 sub map
@@ -638,7 +651,7 @@ sub map
   return undef if !defined $char;
  
   return undef unless exists $self->{_map}->{$char};
-  return $self->{_map}->{$char}-1;
+  $self->{_map}->{$char}-1;
   }
 
 sub chars
@@ -651,17 +664,12 @@ sub chars
   my $i = 1;
   my $y = $x->as_number()->babs();
 
-# print "chars ",caller(),"\n";
   while ($y >= $self->{_sum}->[$i])
     {
-  #  print "cnt: $self->{_cnt} for $i ";
     $self->_calc($i) if $self->{_cnt} < $i;
-  #  print "sum: $self->{_sum}->[$i]\n";
     $i++;
     }
-  $i--;	# correct for ++
-  #print "return $i\n";
-  return $i;
+  --$i;			# correct for last ++
   }                  
 
 sub first
@@ -676,7 +684,7 @@ sub first
   my $t = ($self->{_sep}||'') . $self->{_ones}->[0];
   my $es = $t x $count;
   $es =~ s/^$self->{_sep}// if defined $self->{_sep};
-  return $es;
+  $es;
   }
 
 sub last
@@ -691,7 +699,7 @@ sub last
   my $t = ($self->{_sep}||'') . $self->{_ones}->[-1];
   my $es = $t x $count;
   $es =~ s/^$self->{_sep}// if defined $self->{_sep};
-  return $es;
+  $es;
   }
 
 sub next
@@ -807,7 +815,8 @@ sub merge
   my $self = shift;
   my $other = shift;
 
-  return $self;
+  # TODO
+  $self;
   }
 
 ###############################################################################
@@ -906,7 +915,7 @@ sub study
       $args->{hist} = $chars;
       }
     }
-  return $args;
+  $args;
   }
 
 __END__
@@ -1816,7 +1825,36 @@ minlen will be set to the first non-empty class of the charset.
 Optional maximum string length. Any string longer than this will be invalid.
 Must be longer than a (possible defined) minlen. If not given is set to +inf.
 
+=item scale
+
+Optional input/output scale. See L<scale()>.
+
 =back
+
+=head2 B<scale()>
+
+        $scale = $string->scale();
+        $string->scale(120);
+
+Get/set the (optional) scale of the string. A scale is an integer factor that
+will be applied to each as_number() output as well as each from_number()
+input. E.g. for a scale of 3, the string to number mapping would be changed
+from the left to the right column:
+
+        string form             normal number   scaled number
+        ''                      0               0
+        'a'                     1               3
+        'b'                     2               6
+        'c'                     3               9
+
+And so on. Input like 8 will be divided by 3, which results in 2 due to
+rounding down to the nearest integer. So:
+
+        $string = Math::String->new( 'a' );             # a..z
+        print $string->as_number();                     # 1
+        $string->scale(3);
+        print $string->as_number();                     # 3
+        $string = Math::String->from_number(9,3);       # 9/3 => 3
 
 =head2 B<minlen()>
 

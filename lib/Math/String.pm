@@ -29,7 +29,7 @@ use Math::BigInt;
 use Math::String::Charset;
 use strict;
 use vars qw($VERSION $AUTOLOAD $accuracy $precision $div_scale $round_mode);
-$VERSION = 1.19;	# Current version of this package
+$VERSION = '1.20';	# Current version of this package
 require  5.005;		# requires this Perl version or later
 
 $accuracy   = undef;
@@ -67,14 +67,31 @@ sub from_number
   {
   # turn an integer into a string object
   # catches also Math::String->from_number and make it work
-  my $val = shift; 
-
+  my $val = shift;
+  
   $val = "" if !defined $val;
   $val = shift if !ref($val) && $val eq $class;
+  my $set = shift;
+
+  # make a new bigint (or copy the existing one)
   my $self = Math::BigInt->new($val);
-  bless $self, $class;         # rebless
-  $self->_set_charset(shift);
+  if (ref($set) && (
+    ref($set) eq 'HASH' || UNIVERSAL::isa('Math::String::Charset',$set))
+   )
+    {
+    $self->bmul($set->{_scale}) if defined $set->{_scale};	# scale it?
+    }
+  bless $self, $class;         					# rebless
+  $self->_set_charset($set);
   $self; 
+  }
+
+sub scale
+  {
+  # set/get the scale of the string (from the set)
+  my $self = shift;
+
+  $self->{_set}->scale(@_);
   }
 
 sub bzero
@@ -354,11 +371,13 @@ sub as_number
 
   # old slow way:  return Math::BigInt->new($self->SUPER::bstr());
 
-  # make a copy of us and delete any specifiy (non-MBI) keys
+  # make a copy of us and delete any specific (non-MBI) keys
   my $x = $self->copy();
   delete $x->{_cache}; 
   delete $x->{_set};
-  bless $x, 'Math::BigInt';	# convert it to the new religion 
+  bless $x, 'Math::BigInt';	# convert it to the new religion
+  $x->bmul($self->{_set}->{_scale})
+    if exists $self->{_set}->{_scale}; 	# scale it?
   $x;
   }
 
@@ -720,6 +739,39 @@ Return internal number as normalized string including sign.
 
 Create a Math::String from a given integer value and a charset.
 
+If you want to use big integers as input, quote them:
+	
+	$string = Math::String::from_number('12345678901234567890',$set);
+
+This avoids loosing precision due to intermidiate storage of the number as
+Perl scalar.
+
+=head2 B<scale()>
+
+	$scale = $string->scale();
+	$string->scale(120);
+
+Get/set the (optional) scale of the characterset (thus setting it for all
+strings of that set from this point onwards). A scale is an integer factor
+that will be applied to each as_number() output as well as each from_number()
+input. E.g. for a scale of 3, the string to number mapping would be changed
+from the left to the right column:
+
+	string form		normal number	scaled number
+	''			0		0
+	'a'			1		3
+	'b'			2		6
+	'c'			3		9
+
+And so on. Input like 8 will be divided by 3, which results in 2 due to
+rounding down to the nearest integer. So:
+
+	$string = Math::String->new( 'a' );		# a..z
+	print $string->as_number();			# 1
+	$string->scale(3);
+	print $string->as_number();			# 3
+	$string = Math::String->from_number(9,3);	# 9/3 => 3
+ 
 =head2 B<bzero()>
 
 	$string = Math::String->bzero($charset);

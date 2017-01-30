@@ -1,10 +1,8 @@
-This lists only the changes for the current release (v1.19) over the last
+This lists only the changes for the current release (v1.20) over the last
 version, since CHANGES is now quite big:
 
-* removed debug printout (oups)
-* added __END__ for faster loading
-* removed needless return statements for a trifle more speed
-* added Math::String::Charset::Wordlist
-* fixed a potential problem in Sequence as_array 
-* fixed __PACKAGE in error messages to be actual class name
-* 581 tests now (added wordlist tests)
+* String.pm : added: scale() 
+*             as_number() uses _scale to scale output
+* Charset.pm: added scale parameter, and scale()
+* subclasses automatically inherit the new scale parameter and stuff
+* 602 tests now (added scale tests)
