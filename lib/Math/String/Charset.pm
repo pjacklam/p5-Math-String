@@ -643,13 +643,13 @@ sub chars
 # print "chars ",caller(),"\n";
   while ($y >= $self->{_sum}->[$i])
     {
-    print "cnt: $self->{_cnt} for $i ";
+  #  print "cnt: $self->{_cnt} for $i ";
     $self->_calc($i) if $self->{_cnt} < $i;
-    print "sum: $self->{_sum}->[$i]\n";
+  #  print "sum: $self->{_sum}->[$i]\n";
     $i++;
     }
   $i--;	# correct for ++
-  print "return $i\n";
+  #print "return $i\n";
   return $i;
   }                  
 

@@ -28,6 +28,8 @@ Math::String:
 2001-11-05 1.16: added class() 
 		 binc(), bdec() modify cache instead of clearing it (speedup)
 		 added bone(), is_valid(), minlen(), maxlen(), type(), class() 
+2002-02-20 1.17: removed debug output
+		 _core_lib => config()->{lib}
 
 ############################################################################## 
 Math::String::Charset:
