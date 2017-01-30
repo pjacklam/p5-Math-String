@@ -35,6 +35,8 @@ Math::String:
 2003-02-06 1.19: removed some needless return statements
 		 removed debug printout "changing charset..."
 		 added __END__ marker for faster loading
+2003-04-07 1.20: added: scale()
+		 as_number() uses _scale to scale output
 
 ############################################################################## 
 Math::String::Charset:

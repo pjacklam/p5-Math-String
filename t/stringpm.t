@@ -8,7 +8,7 @@ BEGIN
   $| = 1;
   chdir 't' if -d 't';
   unshift @INC, '../lib'; # to run manually
-  plan tests => 181;
+  plan tests => 196;
   }
 
 use Math::String;
@@ -322,6 +322,33 @@ ok (++$x,'aaa');
 ok (--$x,'F?');
 #$x = Math::String->new('',$cs); $x += 'F?'; 
 #ok ($x,'F?');
+
+###############################################################################
+# scale() and related stuff
+
+$x = Math::String->new('a'); 
+ok_undef ($x->{_scale});
+$x->scale(12);
+ok ($x->{_set}->{_scale},12);
+# not changed:
+ok ($x->bstr(),"a");
+ok ("$x","a");
+# scaled:
+ok ($x->as_number(),12);
+$x++;
+ok ($x->as_number(),24);
+ok ("$x", 'b');
+
+$x = Math::String::from_number(2, ['a'..'z']);
+ok ($x->as_number(),2);
+ok ("$x",'b');
+
+$cs = Math::String::Charset->new(['a'..'z']);
+$cs->scale(123);
+
+$x = Math::String::from_number(0,$cs); ok ($x->as_number(),0); ok ($x,'');
+$x = Math::String::from_number(1,$cs); ok ($x->as_number(),123); ok ($x,'a');
+$x = Math::String::from_number(2,$cs); ok ($x->as_number(),246); ok ($x,'b');
 
 # all done
 
