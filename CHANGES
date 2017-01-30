@@ -37,6 +37,7 @@ Math::String:
 		 added __END__ marker for faster loading
 2003-04-07 1.20: added: scale()
 		 as_number() uses _scale to scale output
+2003-04-10 1.21: fixed: bug in UNIVERSAL::isa() call in from_number
 
 ############################################################################## 
 Math::String::Charset:

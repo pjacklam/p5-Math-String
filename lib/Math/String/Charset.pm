@@ -169,7 +169,8 @@ sub _check_params
   $self->{_order} = $value->{order}; 
   $self->{_type} = $value->{type};
 
-  $self->{_scale} = $value->{scale} if exists $value->{scale};
+  $self->{_scale} = Math::BigInt->new($value->{scale})
+    if exists $value->{scale};
 
   return $self->{_error} = "Can not have both 'bi' and 'sets' in new()"
     if ((exists $value->{sets}) && (exists $value->{bi}));
@@ -1833,12 +1834,15 @@ Optional input/output scale. See L<scale()>.
 
 =head2 B<scale()>
 
-        $scale = $string->scale();
-        $string->scale(120);
+        $scale = $charset->scale();
+        $charset->scale(120);
 
-Get/set the (optional) scale of the string. A scale is an integer factor that
-will be applied to each as_number() output as well as each from_number()
-input. E.g. for a scale of 3, the string to number mapping would be changed
+Get/set the (optional) scale for all strings. A scale is an integer factor that
+will be applied to each as_number() output. Also, all from_number() will
+use the scale to modularize the input, e.g. dividing by the scale, then
+taking the integer result, and the multiplying with the scale again.
+
+E.g. for a scale of 3, the string to number mapping would be changed
 from the left to the right column:
 
         string form             normal number   scaled number
@@ -1848,13 +1852,14 @@ from the left to the right column:
         'c'                     3               9
 
 And so on. Input like 8 will be divided by 3, which results in 2 due to
-rounding down to the nearest integer. So:
+rounding down to the nearest integer, this multiplied by 3 again gives 6. So:
 
-        $string = Math::String->new( 'a' );             # a..z
-        print $string->as_number();                     # 1
-        $string->scale(3);
-        print $string->as_number();                     # 3
-        $string = Math::String->from_number(9,3);       # 9/3 => 3
+        my $cs = Math::String::Charset->new(['a'..'z']); # a..z
+        $string = Math::String->new( 'a',$cs );		 # a..z
+        print $string->as_number();			 # 1
+        $cs->scale(3);
+        print $string->as_number();	 		 # 3
+        $string = Math::String->from_number(10,$cs);	 # [10/3] => 3 *3 == 9
 
 =head2 B<minlen()>
 

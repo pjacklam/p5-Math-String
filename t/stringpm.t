@@ -8,7 +8,7 @@ BEGIN
   $| = 1;
   chdir 't' if -d 't';
   unshift @INC, '../lib'; # to run manually
-  plan tests => 196;
+  plan tests => 200;
   }
 
 use Math::String;
@@ -347,8 +347,10 @@ $cs = Math::String::Charset->new(['a'..'z']);
 $cs->scale(123);
 
 $x = Math::String::from_number(0,$cs); ok ($x->as_number(),0); ok ($x,'');
-$x = Math::String::from_number(1,$cs); ok ($x->as_number(),123); ok ($x,'a');
-$x = Math::String::from_number(2,$cs); ok ($x->as_number(),246); ok ($x,'b');
+$x = Math::String::from_number(123,$cs); ok ($x->as_number(),123); ok ($x,'a');
+$x = Math::String::from_number(246,$cs); ok ($x->as_number(),246); ok ($x,'b');
+$x = Math::String::from_number(122,$cs); ok ($x->as_number(),0); ok ($x,'');
+$x = Math::String::from_number(124,$cs); ok ($x->as_number(),123); ok ($x,'a');
 
 # all done
 
