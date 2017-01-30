@@ -9,10 +9,7 @@
 
 # see:
 # http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/2000-05/msg00974.html
-# vkonovalov@lucent.com 
 # http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/1999-02/msg00812.html
-# BDoucette@tesent.com
-# mjd@plover.com
 
 # the following hash values are used
 # _set			  : ref to charset object
@@ -26,28 +23,39 @@ my $class = "Math::String";
 use Exporter;
 use Math::BigInt;
 @ISA = qw(Exporter Math::BigInt);
-@EXPORT_OK = qw( as_number last first string from_number bzero
+@EXPORT_OK = qw( as_number last first string from_number bzero bone binf bnan
                );
 #@EXPORT = qw( );
 use Math::String::Charset;
 use strict;
-use vars qw($VERSION $AUTOLOAD $accuracy $precision $fallback $rnd_mode);
-$VERSION = 1.14;    # Current version of this package
+use vars qw($VERSION $AUTOLOAD $accuracy $precision $div_scale $round_mode);
+$VERSION = 1.16;    # Current version of this package
 require  5.005;     # requires this Perl version or later
 
-$accuracy = undef;
-$precision = undef;
-$fallback = 40;
-$rnd_mode = 'even';
+$accuracy   = undef;
+$precision  = undef;
+$div_scale  = 0;
+$round_mode = 'even';
 
 use overload
-'cmp'   =>      sub { $_[2]?
-              $_[1] cmp Math::String::bstr($_[0]) :
-              Math::String::bstr($_[0]) cmp $_[1] },
+'cmp'   =>      sub { 
+ 		 my $str = $_[0]->bstr();
+ 		 return undef if !defined $str; 
+ 		 my $str1 = $_[1]; $str1 = $str1->bstr() if ref $str1;
+ 		 return undef if !defined $str1; 
+	        $_[2] ?  $str1 cmp $str : $str cmp $str1;
+	        },
 # can modify arg of ++ and --, so avoid a new-copy for speed
-'++'    =>      sub { Math::BigInt::badd($_[0],Math::BigInt->bone()) },
-'--'    =>      sub { Math::BigInt::badd($_[0],Math::BigInt->bone('-')) },
+'++'    =>      \&binc, #sub { binc($_[0]); },
+'--'    =>      \&bdec, #sub { bdec($_[0]); },
 ;         
+
+my $CALC;
+ 
+BEGIN
+  {
+  $CALC = Math::BigInt::_core_lib();
+  }
 
 # some shortcuts for easier life
 sub string
@@ -78,16 +86,39 @@ sub bzero
     # $x->bzero();	(x) (M::S)
     # $x->bzero();	(x) (M::bi or something)
     $self->SUPER::bzero();
-    bless $self, $class if ref($self) ne $class;         # convert aka rebless
+    bless $self, $class if ref($self) ne $class;	# convert aka rebless
     }
   else
     {
     # M::S::bzero();	()
-    $self = Math::BigInt::bzero();
-    bless $self, $class;
+    $self = Math::BigInt->bzero();
+    bless $self, $class;				# rebless
     $self->_set_charset(shift);
     }
   $self->{_cache}->{str} = '';
+  return $self;
+  }
+
+sub bone
+  {
+  my $self = shift;
+  if (defined $self)
+    {
+    # $x->bzero();	(x) (M::S)
+    # $x->bzero();	(x) (M::bi or something)
+    $self->SUPER::bone();
+    bless $self, $class if ref($self) ne $class;	# convert aka rebless
+    }
+  else
+    {
+    # M::S::bzero(undef,charset);
+    $self = Math::BigInt->bone();
+    bless $self, __PACKAGE__;
+    $self->_set_charset($_[0]);
+    }
+  my $min = $self->{_set}->minlen();
+  $min = 1 if $min <= 0;
+  $self->{_cache}->{str} = $self->{_set}->first($min);	# first of minlen
   return $self;
   }
 
@@ -105,7 +136,7 @@ sub bnan
     {
     # M::S::bnan();	()
     $self = $class->SUPER::bnan();
-    bless $self, $class;
+    bless $self, __PACKAGE__;
     $self->_set_charset(shift);
     }
   $self->{_cache} = undef;
@@ -126,7 +157,7 @@ sub binf
     {
     # M::S::bzero();	()
     $self = $class->SUPER::binf(shift);
-    bless $self, $class;
+    bless $self, __PACKAGE__;
     $self->_set_charset(shift);
     }
   $self->{_cache} = undef;
@@ -155,18 +186,18 @@ sub new
     {
     $self = $value->copy(); 			# got an object, so make copy
     bless $self, $class;			# rebless
-    $self->_set_charset(shift);			# if given charset, copy over
+    print "changing charset to $_[0]\n" if defined $_[0];	
+    $self->_set_charset(shift) if defined $_[0];# if given charset, copy over
     $self->{_cache} = undef;
     }
   else
     {
-    #print "non ref new\n";
+    # print "non ref new ",caller(),"\n";
     bless $self, $class;
     $self->_set_charset(shift);			# if given charset, copy over
     $self->_initialize($value);
     #print "result of new $self\n";
     }
-  #print "after new: ",ref($self),"\n";
   #foreach (keys %$self)
   #  {
   #  print "new $_ => $self->{$_}\n";
@@ -181,10 +212,15 @@ sub _set_charset
   my $self = shift;
   my $cs = shift;
 
+#  print "set charset ",$cs||'undef'," ",caller(),"\n";
   $cs = ['a'..'z'] if !defined $cs;		# default a-z
+#  print "set charset @$cs\n" if ref($cs) eq 'ARRAY';
   $cs = Math::String::Charset->new( $cs ) if ref($cs) =~ /^(ARRAY|HASH)$/;
+#  print "charset $cs\n";
+#  $cs->dump();
   die "charset '$cs' is not a reference" unless ref($cs);
   $self->{_set} = $cs;
+#  print "charset set\n";
   return $self;
   }
 
@@ -204,9 +240,64 @@ sub _initialize
   my $int = $cs->str2num($value);
   foreach my $c (keys %$int) { $self->{$c} = $int->{$c}; }
   
-  $self->{_cache}->{str} = $value;	# caching string form
-  # print "caching $value\n"; 
+  $self->{_cache}->{str} = $cs->norm($value);	# caching normalized form
   return $self;
+  }
+
+sub copy
+  {
+  # for speed reasons, do not make a copy of a charset, but share it instead
+  my ($c,$x);
+  if (@_ > 1)
+    {
+    # if two arguments, the first one is the class to "swallow" subclasses
+    ($c,$x) = @_;
+    }
+  else
+    {
+    $x = shift;
+    $c = ref($x);
+    }
+  return unless ref($x); # only for objects
+ 
+  my $self = {}; bless $self,$c;
+  foreach my $k (keys %$x)
+    {
+    if ($k eq 'value')
+      {
+      $self->{$k} = $CALC->_copy($x->{$k});
+      }
+    elsif (ref($x->{$k}) eq 'SCALAR')
+      {
+      $self->{$k} = \${$x->{$k}};
+      }
+    elsif (ref($x->{$k}) eq 'ARRAY')
+      {
+      $self->{$k} = [ @{$x->{$k}} ];
+      }
+    elsif (ref($x->{$k}) eq 'HASH')
+      {
+      # only one level deep!
+      foreach my $h (keys %{$x->{$k}})
+        {
+        $self->{$k}->{$h} = $x->{$k}->{$h};
+        }
+      }
+    elsif (ref($x->{$k}) =~ /^Math::String::Charset/)
+      {
+      $self->{$k} = $x->{$k};           # for speed reasons share this
+      }
+    elsif (ref($x->{$k}))
+      {
+      my $c = ref($x->{$k});
+      $self->{$k} = $c->new($x->{$k});  # no copy() due to deep rec
+      }
+    else
+      {
+      $self->{$k} = $x->{$k};
+      }
+    }
+  $self;
   }
 
 sub charset
@@ -215,10 +306,29 @@ sub charset
   return $self->{_set};
   }
 
+sub class
+  {
+  my $self = shift;
+  return $self->{_set}->class(@_);
+  }
+
+sub minlen
+  {
+  my $x = shift;
+  return $x->{_set}->minlen();
+  }
+
+sub maxlen
+  {
+  my $x = shift;
+  return $x->{_set}->minlen();
+  }
+
 sub length
   {
   # return number of characters in output
   my $x = shift;
+
   return $x->{_set}->chars($x);
   }
 
@@ -233,10 +343,16 @@ sub bstr
   return $x->{_cache}->{str} if defined $x->{_cache}->{str};
   # num2str needs (due to overloading "$x-1") a Math::BigInt object, so make it 
   # positively happy
-  my $int = Math::BigInt::bzero();
-  # $int->{sign} = '+';
+  my $int = Math::BigInt->bzero();
   $int->{value} = $x->{value};
-  $x->{_cache}->{str} = $x->{_set}->num2str($int);
+  ($x->{_cache}->{str},$x->{_cache}->{len}) = $x->{_set}->num2str($int);
+  if (($x->{_cache}->{len} < $x->{_set}->{_minlen}) ||
+     ($x->{_cache}->{len} > $x->{_set}->{_maxlen}))
+    {
+    # illegal string
+    $x->{_cache}->{str} = undef;
+    delete $x->{_cache}->{len};
+    }
   return $x->{_cache}->{str};
   }
 
@@ -254,18 +370,33 @@ sub order
   return $x->{_set}->order();
   }
 
-sub last
+sub type
   {
   my $x = shift;
+  return $x->{_set}->type();
+  }
 
-  my $es = $x->{_set}->last(@_);
+sub last
+  {
+  my $x = $_[0];
+  if (!ref($_[0]) && $_[0] eq __PACKAGE__)
+    {
+    # Math::String length charset
+    $x = Math::String->new('',$_[2]);	# Math::String->first(3,$set);
+    }
+  my $es = $x->{_set}->last($_[1]);
   return $x->_initialize($es);
   }
 
 sub first
   {
-  my $x = shift;
-  my $es = $x->{_set}->first(@_);
+  my $x = $_[0];
+  if (!ref($_[0]) && $_[0] eq __PACKAGE__)
+    {
+    # Math::String length charset
+    $x = Math::String->new('',$_[2]);	# Math::String->first(3,$set);
+    }
+  my $es = $x->{_set}->first($_[1]);
   return $x->_initialize($es);
   }
 
@@ -275,32 +406,83 @@ sub error
   return $x->{_set}->error();
   }
 
+sub is_valid
+  {
+  my $x = shift;
+
+  # What does charset say to string?
+  if (defined $x->{_cache}->{str})
+    {
+    return $x->{_set}->is_valid($x->{_cache}->{str});
+    }
+  else
+    {
+    $x->{_cache}->{str} = $x->bstr();	# no cache, so create it
+    }
+  my $l = $x->length();
+  return 0 if ($l < $x->minlen() || $l > $x->maxlen());
+  return 1;				# all okay
+  }
+
+#############################################################################
+# binc/bdec for caching
+
+sub binc
+  {
+  my ($self,$x,$a,$p,$r) = Math::BigInt::objectify(1,@_);
+  
+  # badd calls modify, and thus destroys the cache, so store it
+  my $str = $x->{_cache}->{str};
+
+#  print "$self cached $str ",$a||'undef'," ",$p||'undef',"\n";
+  $x->badd(Math::BigInt->bone())->round($a,$p,$r);
+
+#  print "cached $str\n";
+  
+  # if old value cached and no rounding happens
+ if ((defined $str) 
+#   && (!defined $a) && (!defined $p) 
+#   && (!defined $x->accuracy()) && (!defined $x->precision())
+   )
+    {
+#    print "caching $str\n";
+    $x->{_cache}->{str} = $str;		# restore cache	
+    $x->{_set}->next($x);		# update string cache
+#    print "caching ",$x->{_cache}->{str}||'undef',"\n";
+    }
+  return $x;
+  }
+
+sub bdec
+  {
+  my ($self,$x,$a,$p,$r) = Math::BigInt::objectify(1,@_);
+ 
+  # badd calls modify, and thus destroys the cache, so store it
+  my $str = $x->{_cache}->{str};
+
+  $x->bsub(Math::BigInt->bone())->round($a,$p,$r);
+
+  # if old value cached and no rounding happens
+  if ((defined $str) 
+#   && (!defined $a) && (!defined $p) 
+ #  && (!defined $x->accuracy()) && (!defined $x->precision())
+   )
+    {
+    $x->{_cache}->{str} = $str;		# restore cache	
+    $x->{_set}->prev($x);		# update string cache
+#    print "caching ",$x->{_cache}->{str}||'undef',"\n";
+    }
+  return $x;
+  }
+
 #############################################################################
 # cache management
 
 sub modify
   {
   my $self = shift;
-  my $method = shift;
-
-  if ($method =~ /^(bdec|binc)$/)
-    {
-    # update cache instead of invalidating it
-    if ($method eq 'bdec')
-      {
-      $self->{_set}->prev($self);
-      }
-    else
-      {
-      $self->{_set}->next($self);
-      }
-    }
-  else
-    {
-    # invalidate cache if $self is going to be modified
-    $self->{_cache} = undef;
-    }
-#  print "m::s $self modify by $method\n";
+  # invalidate cache if $self is going to be modified
+  $self->{_cache} = undef;	# faster than = {}
   return 0;	# go ahead, modify
   }
 
@@ -313,6 +495,7 @@ Math::String - Arbitrary sized integers having arbitrary charsets to calculate w
 =head1 SYNOPSIS
 
     use Math::String;
+    use Math::String::Charset;
 
     $a = new Math::String 'cafebabe';  	# default a-z
     $b = new Math::String 'deadbeef';  	# a-z
@@ -333,7 +516,13 @@ Math::String - Arbitrary sized integers having arbitrary charsets to calculate w
     print $d->as_number(),"\n";        	# Math::BigInt "+11111"
     print $d->last(5),"\n";            	# string       "99999"
     print $d->first(3),"\n";           	# string       "111"
-    print $d->length,"\n";             	# faster than length("$d");
+    print $d->length(),"\n";           	# faster than length("$d");
+
+    $d = Math::String->new ( '', Math::String::Charset->new ( {
+      minlen => 2, start => [ 'a'..'z' ], } ); 
+
+    print $d->minlen(),"\n";            # print 2
+    print ++$d,"\n";			# print 'aa'
 
 =head1 REQUIRES
 
@@ -474,7 +663,7 @@ with more than one character per, well, character.
 
 =head2 B<new()>
 
-            new();
+	Math::String->new();
 
 Create a new Math::String object. Arguments are the value, and optional
 charset. The charset is set to 'a'..'z' as default. 
@@ -485,16 +674,30 @@ a new one for each Math::String. This will save you memory and computing power.
 See http://bloodgate.com/perl/benchmarks.html for details, and
 L<Math::String::Charset> for how to construct charsets.
 
+=head2 B<error()>
+
+	$string->error();
+
+Return the last error message or ''. The error message stems primarily from the
+underlying charset, and is created when you create an illegal charset.
+
 =head2 B<order()>
 
-            $string->order();
+	$string->order();
 
-Return the type/order of the string derived from the underlying charset. 
+Return the order of the string derived from the underlying charset. 
 1 for SIMPLE (or order 1), 2 for bi-grams etc.
+
+=head2 B<type()>
+
+	$string->type();
+
+Return the type of the string derived from the underlying charset. 
+0 for simple and nested charsets, 1 for grouped ones.
 
 =head2 B<first()>
 
-            $string->first($length);
+	$string->first($length);
 
 It is a bit tricky to get the first string of a certain length, because you
 need to consider the charsets at each digit. This method sets the given
@@ -503,7 +706,7 @@ The length defaults to 1.
 
 =head2 B<last()>
 
-            $string->last($length);
+	$string->last($length);
 
 It is a bit tricky to get the last string of a certain length, because you
 need to consider the charsets at each digit. This method sets the given
@@ -512,40 +715,116 @@ The length defaults to 1.
 
 =head2 B<as_number()>
 
-            $string->as_number();
+	$string->as_number();
 
 Return internal number as normalized string including sign. 
 
 =head2 B<from_number()>
 
-            $string = Math::String::from_number(1234,$charset);
+	$string = Math::String::from_number(1234,$charset);
 
 Create a Math::String from a given integer value and a charset.
 
 =head2 B<bzero()>
 
-            $string = Math::String::bzero($charset);
+	$string = Math::String->bzero($charset);
 
 Create a Math::String with the number value 0 (evaluates to '').
+The following would set $x to '':
+
+        $x = Math::String->new('cafebabe');
+	$x->bzero();
+
+=head2 B<bone()>
+
+	$string = Math::String->bone($charset);
+
+Create a Math::String with the number value 1 and the given charset
+
+The following would set $x to the number 1 (and it's respective string):
+
+        $x = Math::String->new('cafebabe');
+	$x->bone();
+
+=head2 B<binf()>
+
+	$string = Math::String->binf($sign);
+
+Create a Math::String with the number infinity.
+
+The following would set $x to -infinity (and it's respective string):
+
+        $x = Math::String->new('deadbeef');
+	$x->binf('-');
+
+=head2 B<bnan()>
+
+	$string = Math::String->bnan();
+
+Create a Math::String as a NotANumber.
+
+The following would set $x to NaN (and it's respective string):
+
+        $x = Math::String->new('deadbeef');
+	$x->bnan();
+
+=head2 B<is_valid()>
+
+	print $string->error(),"\n" if !$string->is_valid();
+
+Returns 0 if the string is valid (according to it's charset and string
+representation) and the cached string value matches the string's internal
+number represantation. Costly operation, but usefull for tests.
+
+=head2 B<class()>
+
+	$count = $string->class($length);
+
+Returns the number of possible strings with the given length, aka so many
+characters (not bytes or chars!).
+	
+	$count = $string->class(3);	# how many strings with len 3
+
+=head2 B<minlen()>
+
+	$string->minlen();
+
+Return the minimum length of a valid string as defined by it's charset.
+Note that the string '' has a length of 0, and thus is not valid if C<minlen>
+is greater than 0.
+Returns 0 if no minimum length is required. The minimum length must be smaller
+or equal to the C<maxlen>.
+
+=head2 B<maxlen()>
+
+	$string->maxlen();
+
+Return the maximum length of a valid string as defined by it's charset.
+Returns 0 if no maximum length is required. The maximum length must be greater
+or equal to the C<minlen>.
 
 =head2 B<length()>
 
-            $string->length();
+	$string->length();
 
-Return the number of characters in the resulting string (aka it's length). This
-is faster than doing C<length("$string");> because it doesn't actually create
-the string version from the internal number representation.
+Return the number of characters in the resulting string (aka it's length). The
+zero string '' has a length of 0.
+
+This is faster than doing C<length("$string");> because it doesn't need to do
+the costly creation of the string version from the internal number
+representation.
 
 Note: The length() will be always in characters. If your characters in the
 charset are longer than one byte/character, you need to multiply the length
-by the character length. This is nearly impossible, if your characterset has
-characters with different lengths (aka if it has a separator character). In
-this case you need to construct the string to find out the actual length in
-bytes. 
+by the character length to find out how many bytes the string would have.
+
+This is nearly impossible if your character set has characters with different
+lengths (aka if it has a separator character). In this case you need to
+construct the string to find out the actual length in bytes. 
 
 =head2 B<bstr()>
 
-            $string->bstr();
+	$string->bstr();
 
 Return a string representing the internal number with the given charset.
 Since this omitts the sign, you can not distinguish between negative and 
@@ -557,13 +836,13 @@ This returns undef for 'NaN', since with a charset of
 
 =head2 B<charset()>
 
-            $string->charset();
+	$string->charset();
 
 Return a reference to the charset of the Math::String object.
 
 =head2 B<string()>
 
-            Math::String->string();
+	Math::String->string();
 
 Just like new, but you can import it to save typing.
 
@@ -706,22 +985,19 @@ code is what you want to use.
 
 See http://bloodgate.com/perl/benchmarks.html
 
-=head1 PLANS
-
-Support for more and different charsets.
-
 =head1 BUGS
 
 =over 2
 
 =item *
 
-Charsets with bi-grams do not work yet.
+Charsets with bi-grams do not work fully yet.
 
 =item *
 
 Adding/subtracting etc Math::Strings with different charsets treats the
-second argument as it had the charset of the first. 
+second argument as it had the charset of the first. This is thought as a
+feature, not a bug.
 
 Only if the first charset contains all the characters of second string, you
 could convert the second string to the first charset, but whether this is
@@ -736,7 +1012,7 @@ usefull is questionable:
 	$y = $z + $a;					# is 2, with set z..a
 
 If you convert $z to $a's charset, you would get either an 1 ('a'),
-or a 26 ('z'), and which one is more valid is unclear.  
+or a 26 ('z'), and which one is the right one is unclear.  
 
 =back
 

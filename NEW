@@ -1,6 +1,36 @@
-This lists only the changes for the current release (v1.14) over the last
+This lists only the changes for the current release (v1.16) over the last
 version, since HISTORY is now quite big:
 
-* bstr() was not caching the result, missing speedups
-* some more tests and some small nits
+* Math::String::Charset:
+  + split Charset.pm into
+	Math::String::Charset::Simple		(type = 0, order = 1)
+	Math::String::Charset::Nested		(type = 0, order > 1)
+	Math::String::Charset::Grouped		(type = 1, order = 1)
+  + support for minlen and maxlen
+  + added ones(), count(), zero(), one() and tests for these
+  + next/prev actually work
+  + analyze is alias for study, can export analyze
+  + better error handling upon initialization
+  + added type()
+  + is now subclassable
+  + first()/last() work now with sep char, added tests for that
+  + make Math::String->first($length,$set) work	(and last(), too), test for it
+  + study: 
+      - 'chars' and 'start' for depth => 1
+      - depth as alias for order
+      - can return histogram (hist => 1)
+      - now works for the "hocuspocus" example
+      - tests are now in seperate file
+
+* Math::String::Charset::Nested
+  + bi-gram chars that have no followers can't be in _start (but can be in
+    the _ones set), tests for that
+  + first(), last() work now as expected
+  + class() was wrong if not all chars in set were also in the start set
+  + can have empty ones set (minlen == 2 in this case)
+  + check for minlen > 2 (class(2) == 0)
+
+* Math::String:
+  + binc(), bdec() modify (instead clear) the cache to avoid costly recalcs
+  + added bone(), is_valid(), minlen(), maxlen(), type(), class()
 
