@@ -32,6 +32,9 @@ Math::String:
 		 _core_lib => config()->{lib}
 2002-02-28 1.18: binc()/bdec() four times as fast
 		 as_number twice as fast
+2003-02-06 1.19: removed some needless return statements
+		 removed debug printout "changing charset..."
+		 added __END__ marker for faster loading
 
 ############################################################################## 
 Math::String::Charset:
@@ -75,17 +78,24 @@ Math::String::Charset:
 			 can return histogram (hist => 1)
 			 now works for the "hocuspocus" example
 			 tests are now in seperate file 
+2003-02-06 1.12: added __END__ marker for faster loading
 
 ############################################################################## 
 Math::String::Charset::Grouped:
 2000-09-20 0.01: first version from Charset
 2000-10-25 0.02: fixed bugs, added sep char support
+2003-02-06 0.03: added __END__ marker for faster loading
 
 ############################################################################## 
 Math::String::Charset::Nested:
 2000-09-15 0.01: split from Charset
 		 fixed: bi-gram chars w/o followers can't be in _start
 		 class() was wrong for bi-grams (with some start sets)
+2003-02-06 0.02: added __END__ marker for faster loading
+
+############################################################################## 
+Math::String::Charset::Wordlist
+2003-02-06 0.01: first version
 
 ############################################################################## 
 Math::String::Sequence:
@@ -93,4 +103,5 @@ Math::String::Sequence:
 2001-03-20 1.00 first version, complete with test and doc
 2001-03-24 1.01 support for reversed sequences
 2001-04-21 1.02 added: as_array for 'a'..'z' emulation
-
+2003-02-06 1.03 added __END__ marker for faster loading
+		fixed a potential problem in as_array()

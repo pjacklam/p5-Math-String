@@ -3,14 +3,14 @@
 #############################################################################
 # Math/String/Charset/Grouped.pm -- a charset of charsets for Math/String
 #
-# Copyright (C) 1999-2001 by Tels. All rights reserved.
+# Copyright (C) 1999-2003 by Tels. All rights reserved.
 #############################################################################
 
 package Math::String::Charset::Grouped;
 use base Math::String::Charset;
 
 use vars qw($VERSION);
-$VERSION = 0.01;	# Current version of this package
+$VERSION = 0.02;	# Current version of this package
 require  5.005;		# requires this Perl version or later
 
 use strict;
@@ -57,13 +57,14 @@ sub _strict_check
   my $self = shift;
   my $value = shift;
 
-  return $self->{_error} = "Wrong type '$self->{_type}' for __PACKAGE__"
+  my $class = ref($self);
+  return $self->{_error} = "Wrong type '$self->{_type}' for $class"
     if $self->{_type} != 1;
-  return $self->{_error} = "Wrong order'$self->{_order}' for __PACKAGE__"
+  return $self->{_error} = "Wrong order'$self->{_order}' for $class"
     if $self->{_order} != 1;
   foreach my $key (keys %$value)
     {
-    return $self->{_error} = "Illegal parameter '$key' for __PACKAGE__"
+    return $self->{_error} = "Illegal parameter '$key' for $class"
       if $key !~ /^(start|minlen|maxlen|sep|sets|end|charlen)$/;
     }
   }
@@ -287,21 +288,22 @@ sub is_valid
     {
     return 0 if !defined $spat->[$k++]->map($c);
     }
-  return 1;
+  # all tests passed
+  1;
   }
 
 sub minlen
   {
   my $self = shift;
 
-  return $self->{_minlen};
+  $self->{_minlen};
   }
 
 sub maxlen
   {
   my $self = shift;
 
-  return $self->{_maxlen};
+  $self->{_maxlen};
   }
 
 sub start
@@ -312,7 +314,7 @@ sub start
   # equals the length
   my $self = shift;
 
-  return wantarray ? @{$self->{_start}} : scalar @{$self->{_start}};
+  wantarray ? @{$self->{_start}} : scalar @{$self->{_start}};
   }
       
 sub end
@@ -323,7 +325,7 @@ sub end
   # equals the length
   my $self = shift;
 
-  return wantarray ? sort keys %{$self->{_end}} : scalar keys %{$self->{_end}};
+  wantarray ? sort keys %{$self->{_end}} : scalar keys %{$self->{_end}};
   }
 
 sub ones
@@ -331,7 +333,7 @@ sub ones
   # this returns all the one-char strings (in scalar context the count of them)
   my $self = shift;
 
-  return wantarray ? @{$self->{_ones}} : scalar @{$self->{_ones}};
+  wantarray ? @{$self->{_ones}} : scalar @{$self->{_ones}};
   }
 
 sub num2str
@@ -384,7 +386,7 @@ sub num2str
     $es = $spat->[$k--]->char(0) . $s . $es;
     }
   $es =~ s/$s$//;                               # strip last sep 'char'
-  return wantarray ? ($es,$d) : $es;
+  wantarray ? ($es,$d) : $es;
   }
 
 sub str2num
@@ -450,7 +452,7 @@ sub str2num
       $mul *= $cs->length();
       }
     }
-  return $int + $self->{_sum}->[$c];			# add base sum
+  $int + $self->{_sum}->[$c];				# add base sum
   }
 
 #sub char
@@ -484,7 +486,7 @@ sub first
     }
   $s = quotemeta($s);
   $es =~ s/^$s// if $s ne '';		# remove first sep
-  return $es;
+  $es;
   }
 
 sub last
@@ -508,7 +510,7 @@ sub last
     }
   $s = quotemeta($s);
   $es =~ s/^$s// if $s ne '';		# remove first sep
-  return $es;
+  $es;
   }
 
 sub next
@@ -553,15 +555,17 @@ sub prev
   $str->{_cache} = undef;
   }
 
+__END__
+
 #############################################################################
 
 =head1 NAME
 
-Math::String::Charset::Grouped - A charset of simple charsets Math::String objects.
+Math::String::Charset::Grouped - A charset of simple charsets for Math::String objects.
 
 =head1 SYNOPSIS
 
-    use Math::String::Charset;
+    use Math::String::Charset::Grouped;
 
 =head1 REQUIRES
 
@@ -573,7 +577,7 @@ Exports nothing.
 
 =head1 DESCRIPTION
 
-This module lets you create an charset object, which is used to contruct
+This module lets you create an charset object, which is used to construct
 Math::String objects. 
 
 This object can assign for each position in a Math::String a different simple
@@ -921,8 +925,7 @@ None doscovered yet.
 If you use this module in one of your projects, then please email me. I want
 to hear about how my code helps you ;)
 
-This module is (C) Copyright by Tels http://bloodgate.com 2000-2001.
+This module is (C) Copyright by Tels http://bloodgate.com 2000-2003.
 
 =cut
 
-1;
