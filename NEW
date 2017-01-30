@@ -1,8 +1,148 @@
-This lists only the changes for the current release (v1.24) over the last
+This lists only the changes for the current release (v1.25) over the last
 version, since CHANGES is now quite big:
 
-* new( { str => ..., num => ... } ) did not take a possible scale from the
-  charset into account
-* added tests for new() with two-arg-form and scaled charset
-* prerequisite Math::BigInt v1.67
-* 599 tests
+Charsets:
+  * for simple Charsets, the _end hash can be shared with the _map hash. That
+    reduces memory by at least 20% (a..z, leaning towards 30% for larger sets)
+    and makes new() at least 10% (a..z, more for larger sets) faster, too :)
+  * dump() returns the dump as string instead of printing it
+  * fix end keys in dump from SIMPLE charsets
+  * fix dump() for GROUPED charsets
+  * dump() takes optional indend parameter
+  * remove unused SIMPLE() in Charset.pm
+  * streamlined str2num() to make "new()" faster
+  * streamlined num2str() to make "bstr()" faster
+  * fixed prev() and next() with negative strings
+  * prev()/next() were not optimal for charsets with seperator
+Strings:
+  * simplify caching: 
+    + remove unused len cache
+    + since we only cache on thing, use a plain scalar instead of a hash, this
+      saves memory per Math::String object and makes everything go a little
+      faster since a hash lookup for ->{str} is no longer necessary
+  * bstr() for uncached, single-char strings with a SIMPLE charset is now
+    about twice as fast
+  * copy() is about 16% faster (due to simpler cache and streamlining)
+Misc:
+  * prerequisite Math::BigInt v1.73
+  * fixed the str_cache.pl script in bench/
+  * 662 tests
+
+#############################################################################
+#############################################################################
+
+Size report with Devel::Size::Report (excluding _set, since that would
+measure the size of the shared Math::String::Charset):
+
+#############################################################################
+Math::String v1.24
+Size report v0.07 for 'abc' (Math::String):
+  Hash (Math::String) 448 bytes (overhead: 205 bytes, 45.76%)
+    '_cache' => Hash 145 bytes (overhead: 117 bytes, 80.69%)
+      'str' => Scalar 28 bytes
+    'value' => Array 72 bytes (overhead: 56 bytes, 77.78%)
+      Scalar 16 bytes
+    'sign' => Scalar 26 bytes
+Total: 448 bytes in 6 elements
+
+a..z,A..Z,0..9:
+Size report v0.07 for 'Math::String::Charset=HASH(0x845dfe8)'
+Total: 8208 bytes in 226 elements
+
+a..z:
+Size report v0.07 for 'Math::String::Charset=HASH(0x846a3ec)'
+Total: 4460 bytes in 118 elements
+
+grouped:
+Size report v0.07 for 'Math::String::Charset::Grouped=HASH(0x846ffa8)'
+Total: 16763 bytes in 560 elements
+
+#############################################################################
+Math::String v1.25
+Size report v0.07 for 'abc' (Math::String):
+  Hash (Math::String) 315 bytes (overhead: 189 bytes, 60.00%)
+    '_cache' => Scalar 28 bytes
+    'value' => Array 72 bytes (overhead: 56 bytes, 77.78%)
+      Scalar 16 bytes
+    'sign' => Scalar 26 bytes
+Total: 315 bytes in 5 elements
+
+a..z,A..Z,0..9:
+Size report v0.07 for 'Math::String::Charset=HASH(0x845f32c)'
+Total: 6156 bytes in 164 elements
+
+a..z:
+Size report v0.07 for 'Math::String::Charset=HASH(0x845fbd4)'
+Total: 3544 bytes in 92 elements
+
+grouped:
+Size report v0.07 for 'Math::String::Charset::Grouped=HASH(0x8463e4c)'
+Total: 12838 bytes in 445 elements
+
+#############################################################################
+#############################################################################
+
+Benchmarks
+
+Math::String v1.24
+
+bstr("a" x 200):  	4 s ( 4.05 usr +  0.00 sys =  4.05 CPU) @  95079/s (n=385072)
+ bstr("a"):  	  	3 s ( 4.29 usr +  0.01 sys =  4.30 CPU) @  98841/s (n=425018)
+bstr("aaa"):      	5 s ( 4.15 usr +  0.00 sys =  4.15 CPU) @  99916/s (n=414652)
+bstr("aaa") uncached:   4 s ( 4.26 usr +  0.01 sys =  4.27 CPU) @   2586/s (n=11046)
+bstr("b") uncached:  	4 s ( 4.27 usr +  0.01 sys =  4.28 CPU) @   3586/s (n=15349)
+bstr() uncached:  	5 s ( 4.32 usr +  0.02 sys =  4.34 CPU) @    343/s (n=1489)
+    copy():  		4 s ( 4.16 usr +  0.01 sys =  4.17 CPU) @  35003/s (n=145963)
+       dec:  		4 s ( 4.22 usr +  0.00 sys =  4.22 CPU) @  30628/s (n=129252)
+dec w/ sep:  		5 s ( 4.24 usr +  0.01 sys =  4.25 CPU) @   3932/s (n=16715)
+       inc:  		4 s ( 4.20 usr +  0.01 sys =  4.21 CPU) @  27858/s (n=117285)
+inc w/ sep:  		5 s ( 4.79 usr +  0.01 sys =  4.80 CPU) @    816/s (n=3920)
+      math: 		4 s ( 4.26 usr +  0.01 sys =  4.27 CPU) @   2002/s (n=8552)
+new("aaa"):  		4 s ( 4.28 usr +  0.00 sys =  4.28 CPU) @   1531/s (n=6553)
+new("aaaaaa"):  	4 s ( 4.20 usr +  0.01 sys =  4.21 CPU) @    957/s (n=4033)
+  new+bstr:  		4 s ( 4.16 usr +  0.01 sys =  4.17 CPU) @     71/s (n=299)
+num2str($num):  	4 s ( 4.16 usr +  0.00 sys =  4.16 CPU) @  35884/s (n=149281)
+num2str(1234):  	5 s ( 4.16 usr +  0.00 sys =  4.16 CPU) @  33660/s (n=140026)
+
+Benchmarking Math::String::Charset:
+
+new ( grouped ):  	5 s ( 5.33 usr +  0.02 sys =  5.35 CPU) @    870/s (n=4656)
+copy (a..z):  		6 s ( 5.28 usr +  0.00 sys =  5.28 CPU) @   5209/s (n=27504)
+new (a..z):  		5 s ( 5.30 usr +  0.01 sys =  5.31 CPU) @   2949/s (n=15660)
+new (aa..zz):  		5 s ( 5.26 usr +  0.02 sys =  5.28 CPU) @    324/s (n=1711)
+
+Math::String v1.25:
+
+bstr("a" x 200):  	5 s ( 4.13 usr +  0.01 sys =  4.14 CPU) @ 212833/s (n=881129)
+ bstr("a"):  		5 s ( 4.14 usr +  0.01 sys =  4.15 CPU) @ 221084/s (n=917500)
+bstr("aaa"):  		4 s ( 4.26 usr +  0.01 sys =  4.27 CPU) @ 220111/s (n=939878)
+bstr("aaa") uncached: 	4 s ( 4.21 usr +  0.01 sys =  4.22 CPU) @   3182/s (n=13429)
+bstr("b") uncached:  	4 s ( 4.16 usr +  0.01 sys =  4.17 CPU) @  16787/s (n=70003)
+bstr() uncached:  	4 s ( 4.28 usr +  0.02 sys =  4.30 CPU) @    338/s (n=1455)
+    copy():		5 s ( 4.15 usr +  0.01 sys =  4.16 CPU) @  42516/s (n=176868)
+       dec:		4 s ( 4.10 usr +  0.01 sys =  4.11 CPU) @  36321/s (n=149281)
+dec w/ sep:	 	5 s ( 4.63 usr +  0.02 sys =  4.65 CPU) @   2258/s (n=10500)
+       inc: 		4 s ( 4.18 usr +  0.01 sys =  4.19 CPU) @  31582/s (n=132330)
+inc w/ sep:  		5 s ( 4.55 usr +  0.01 sys =  4.56 CPU) @   2264/s (n=10326)
+      math:  		4 s ( 4.00 usr +  0.00 sys =  4.00 CPU) @    384/s (n=1539)
+new("aaa"):  		4 s ( 4.25 usr +  0.01 sys =  4.26 CPU) @   5477/s (n=23334)
+new("aaaaaa"):  	5 s ( 4.25 usr +  0.00 sys =  4.25 CPU) @   4118/s (n=17503)
+  new+bstr:  		5 s ( 4.25 usr +  0.01 sys =  4.26 CPU) @    196/s (n=839)
+num2str($num):  	4 s ( 4.18 usr +  0.00 sys =  4.18 CPU) @  42312/s (n=176868)
+num2str(1234):  	4 s ( 4.12 usr +  0.00 sys =  4.12 CPU) @  39766/s (n=163839)
+
+Benchmarking Math::String::Charset:
+
+new ( grouped ):  	5 s ( 5.23 usr +  0.01 sys =  5.24 CPU) @   984/s (n=5157)
+copy (a..z):  		6 s ( 5.27 usr +  0.00 sys =  5.27 CPU) @  5612/s (n=29578)
+new (a..z):  		5 s ( 5.28 usr +  0.01 sys =  5.29 CPU) @  3729/s (n=19730)
+new (aa..zz):  		5 s ( 5.30 usr +  0.02 sys =  5.32 CPU) @   436/s (n=2323)
+
+#############################################################################
+#############################################################################
+
+Have fun,
+
+Tels
+
+

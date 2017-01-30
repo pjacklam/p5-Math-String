@@ -4,56 +4,86 @@
 # v1.16 w/o cache, v1.20 w/ cache
 
 $| = 1;
-use lib '../lib';
+use lib shift || '../lib';
 use Math::String;
 use strict;
 use Benchmark;
 
-my $a = Math::String->new('');
+print "Math::String v$Math::String::VERSION\n\n";
 
-my ($x,$i); $i = 0; 
+my $set = Math::String::Charset->new( [ 'a' .. 'z' ]);
 
-my $c = 0.1; 	# correction factor if benchmark is to slow/fast
+my $empty = Math::String->new('');
+my $a = Math::String->new('a');
+my $aa = Math::String->new('aa');
+my $aaa = Math::String->new('aaa');
 
-timethese ( $c*10000, { 
-  'inc' => sub { $a++; $x = "$a"; },
-  'dec' => sub { $a--; $x = "$a"; }, 
-  });
+my ($x);
 
-$a = Math::String->new('', Math::String::Charset->new ( {
+my $b = Math::String->new('', Math::String::Charset->new ( {
+  sep => '-', start => [ 'foo', 'bar', 'baz' ],
+  } ) );
+my $d = Math::String->new('', Math::String::Charset->new ( {
   sep => '-', start => [ 'foo', 'bar', 'baz' ],
   } ) );
 
-timethese ( $c*10000, { 
-  'inc w/ sep' => sub { $a++; $x = "$a"; },
-  'dec w/ sep' => sub { $a--; $x = "$a"; }, 
-  });
+my $c = 'a';
 
-$a = 'a';
+my $z = Math::String->new('a'.'a' x 200);
 
-timethese ( $c*10000000, { 
-  'build-in ++' => sub { $a++; $x = "$a"; },
-  'build-in --' => sub { $a--; $x = "$a"; }, 
-  });
+my $z_u = $z->copy();
+my $z_b = Math::String->new('b');
 
-exit;
-
-timethese ( $c*800, { 
-  'new,bstr' => sub { $a = Math::String->new('a'.'a' x int($i)); $x = "$a"; $i += 0.01; },
-  } );
-
-$a = Math::String->new('a'.'a' x 200);
-# correct for faster bench if cache is present
-my $f = 1; $f = 200 if defined $a->{_cache}->{str};	
-timethese ( $f*$c*200, { 
-  'bstr' => sub { $x = "$a"; },
-  } );
+my $x_o = Math::String->new('a'.'a' x 100); 
 
 my $y = Math::BigInt->new(3);
-$i = 100;
 
-timethese ( $c*200, { 
-  'no bstr' => sub { $x = Math::String->new('a'.'a' x $i); 
+my $num = Math::BigInt->new('12345678901234567890');
+
+timethese ( -4, { 
+  'inc' => sub { $a++; $x = "$empty"; },
+  'dec' => sub { $a--; $x = "$empty"; }, 
+  'inc w/ sep' => sub { $b++; $x = "$b"; },
+  'dec w/ sep' => sub { $d--; $x = "$d"; }, 
+#  'build-in ++' => sub { $c++; $x = "$c"; },
+  'new+bstr' => sub { my $u = Math::String->new('a' x 100); $x = "$u"; },
+  'copy()' => sub { $z->copy(); },
+  'bstr("a" x 200)' => sub { $x = "$z"; },
+  'bstr("a")' => sub { $x = "$a"; },
+  'bstr("aaa")' => sub { $x = "$aaa"; },
+  'bstr("aaa") uncached' => sub { $aaa->{_cache} = undef; $x = "$aaa"; },
+  'bstr() uncached' => sub { $z_u->{_cache} = undef; $x = "$z_u"; },
+  'bstr("b") uncached' => sub { $z_b->{_cache} = undef; $x = "$z_b"; },
+  'num2str(1234)' => sub { my $x = Math::String->from_number( 1234, $set ) },
+  'num2str($num)' => sub { my $x = Math::String->from_number( $num, $set ) },
+  'new("aaa")' => sub { my $x = Math::String->new( 'aaa', $set ) },
+  'new("aaaaaa")' => sub { my $x = Math::String->new( 'aaaaaa', $set ) },
+  'math' => sub { 
+    $x = $x_o->copy(); 
     $x = ($x * $y + $x + $x ** $y) / $y; },
+  });
+
+my $set_a_z = Math::String::Charset->new( [ 'a'..'z' ] );
+my $set_0_9 = Math::String::Charset->new( [ '0'..'9' ] );
+
+print "Benchmarking Math::String::Charset:\n\n";
+
+timethese ( -5, { 
+  'new ( grouped )' => sub {
+     my $set = Math::String::Charset->new( { sets => { 0 => $set_a_z, -1 => $set_0_9, 1 => $set_0_9 } } );
+   },
+  } ); 
+
+timethese ( -5, { 
+  'new (a..z)' => sub {
+     my $set = Math::String::Charset->new( [ 'a'..'z' ] );
+   },
+  'new (aa..zz)' => sub {
+     my $set = Math::String::Charset->new( [ "aa" .. "zz" ] );
+   },
+  'copy (a..z)' => sub {
+     my $set = $set_a_z->copy();
+   },
   } );
+
 

@@ -10,7 +10,7 @@ BEGIN
   $| = 1;
   unshift @INC, '../lib'; # to run manually
   chdir 't' if -d 't';
-  plan tests => 94;
+  plan tests => 95;
   }
 
 use Math::String::Charset;
@@ -203,6 +203,29 @@ ok (ref($b), $c);
 ok ($b->error(),"");
 ok ($b->isa('Math::String::Charset'));
 ok ($b->isa($c));
+
+my $expected = <<HERE
+type: GROUPED
+ 1 => type SIMPLE:
+   start: A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+   end  : A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+   ones : A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+ 0 => type SIMPLE:
+   start: a b c d e f
+   end  : a b c d e f
+   ones : a b c d e f
+ -1 => type SIMPLE:
+   start: 0 1 2 3 4 5 6 7 8 9
+   end  : 0 1 2 3 4 5 6 7 8 9
+   ones : 0 1 2 3 4 5 6 7 8 9
+ones :
+
+HERE
+;
+
+my $got = $b->dump(); $got =~ s/\s$//; $expected =~ s/\s$//;
+
+ok ($got, $expected);
 
 ###############################################################################
 # Perl 5.005 does not like ok ($x,undef)

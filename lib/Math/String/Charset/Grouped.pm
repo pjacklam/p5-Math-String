@@ -8,11 +8,11 @@ package Math::String::Charset::Grouped;
 use base Math::String::Charset;
 
 use vars qw($VERSION);
-$VERSION = '0.05';	# Current version of this package
+$VERSION = '0.06';	# Current version of this package
 require  5.005;		# requires this Perl version or later
 
 use strict;
-use Math::BigInt lib => 'GMP';
+use Math::BigInt;
 
 use vars qw/$die_on_error/;
 $die_on_error = 1;              # set to 0 to not die
@@ -42,7 +42,6 @@ $die_on_error = 1;              # set to 0 to not die
 # _bi   : hash with refs to array of bi-grams
 # _bmap : hash with refs to hash of bi-grams
 # _scnt : array of hashes, count of strings starting with this character
-# _sm	: hash w/ mapping of start characters for faster lookup
 
 # grouped:
 # _spat	: array with pattern of charsets 8for each stirnglen one ARRAY ref)
@@ -111,14 +110,15 @@ sub _initialize
   $self->{_clen} = $self->{_start}->charlen() if
    ((!defined $self->{_clen}) && (!defined $self->{_sep}));
 
-  # build _ones and _sm list (cross from start/end)
+  # build _ones list (cross from start/end)
   $self->{_ones} = [];
-  $self->{_sm} = {};
-  my $end = { map { $_ => 1 } $self->{_end}->start() };
+  
+  # _end is a simple charset, so use it's map directly
+  my $end = $self->{_end}->{_map};
+  my $o = $self->{_ones};
   foreach ($self->{_start}->start())
     {
-    push @{$self->{_ones}}, $_ if exists $end->{$_};
-    $self->{_sm}->{$_} = 1;
+    push @$o, $_ if exists $end->{$_};
     }
   #print "\n";
 
@@ -185,16 +185,14 @@ sub dump
   {
   my $self = shift;
   
-  print "type: GROUPED\n";
+  my $txt = "type: GROUPED\n";
 
   foreach my $set (keys %{$self->{_sets}})
     {
-    print " $set => ";
-    $self->{_sets}->{$set}->dump();
+    $txt .= " $set => ". $self->{_sets}->{$set}->dump('   ');
     }
-  print "start: ", join(' ',@{$self->{_start}}),"\n";
-  print "end  : ", join(' ',keys %{$self->{_end}}),"\n";
-  print "ones : ", join(' ',@{$self->{_ones}}),"\n";
+  $txt .= "ones : " . join(' ',@{$self->{_ones}}) . "\n";
+  $txt;
   }
 
 sub _calc
@@ -517,14 +515,10 @@ sub next
   my $self = shift;
   my $str = shift;
 
-# for timing disable it here:
-#  $str->{_cache}->{str} = undef; return;
-#  return if !defined $str->{_cache}->{str};
-#  print "next '$str'\n";
-  if ($str->{_cache}->{str} eq '')				# 0 => 1
+  if ($str->{_cache} eq '')				# 0 => 1
     {
     my $min = $self->{_minlen}; $min = 1 if $min <= 0;
-    $str->{_cache}->{str} = $self->first($min);
+    $str->{_cache} = $self->first($min);
     return;
     }
 
@@ -543,10 +537,10 @@ sub prev
   my $self = shift;
   my $str = shift;
 
-  if ($str->{_cache}->{str} eq '')				# 0 => -1
+  if ($str->{_cache} eq '')				# 0 => -1
     {
     my $min = $self->{_minlen}; $min = -1 if $min >= 0;
-    $str->{_cache}->{str} = $self->first($min);
+    $str->{_cache} = $self->first($min);
     return;
     }
 

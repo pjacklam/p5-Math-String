@@ -13,11 +13,11 @@ package Math::String::Charset::Nested;
 use base Math::String::Charset;
 
 use vars qw($VERSION);
-$VERSION = '0.04';	# Current version of this package
+$VERSION = '0.06';	# Current version of this package
 require  5.005;		# requires this Perl version or later
 
 use strict;
-use Math::BigInt lib => 'GMP';
+use Math::BigInt;
 
 use vars qw/$die_on_error/; 
 $die_on_error = 1;		# set to 0 to not die
@@ -598,13 +598,9 @@ sub next
   my $self = shift;
   my $str = shift;
 
-# for timing disable it here:
-#  $str->{_cache}->{str} = undef; return;
-#  return if !defined $str->{_cache}->{str};
-#  print "next '$str'\n";
-  if ($str->{_cache}->{str} eq '')				# 0 => 1
+  if ($str->{_cache} eq '')				# 0 => 1
     {
-    $str->{_cache}->{str} = $self->first($self->minlen()||1);
+    $str->{_cache} = $self->first($self->minlen()||1);
     return;
     }
 
@@ -616,8 +612,8 @@ sub next
 
   # for higher orders not ready yet
   $str->{_cache} = undef;
-  return;
-
+  
+  $self;
   }
 
 sub prev
@@ -625,16 +621,16 @@ sub prev
   my $self = shift;
   my $str = shift;
 
-  if ($str->{_cache}->{str} eq '')				# 0 => -1
+  if ($str->{_cache} eq '')				# 0 => 1
     {
-    $str->{_cache}->{str} = $self->first($self->minlen()||1);
+    $str->{_cache} = $self->first($self->minlen()||1);
     return;
     }
 
   # for higher orders not ready yet
   $str->{_cache} = undef;
-  return;
-
+  
+  $self;
   }
 
 
