@@ -1,7 +1,7 @@
 #############################################################################
 # Math/String/Sequence.pm -- defines a sequence or range of strings.
 #
-# Copyright (C) 2001-2003 by Tels. All rights reserved.
+# Copyright (C) 2001 - 2005 by Tels.
 #############################################################################
 
 # the following hash values are used
@@ -13,14 +13,13 @@
 
 package Math::String::Sequence;
 use vars qw($VERSION);
-$VERSION = '1.05';	# Current version of this package
+$VERSION = '1.06';	# Current version of this package
 require  5.005;		# requires this Perl version or later
 
 use Exporter;
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(sequence);
 
-use Math::BigInt;# lib => 'GMP';
 use Math::String;
 use Math::String::Charset;
 
@@ -31,7 +30,7 @@ my $class = "Math::String::Sequence";
 sub sequence
   {
   # exportable version of new
-  return $class->new(@_);
+  $class->new(@_);
   }
 
 ###############################################################################
@@ -85,7 +84,7 @@ sub new
   $self->{_first} = $first;
   $self->{_last} = $last;
   $self->_initialize();
-  return $self; 
+  $self; 
   }
 
 #############################################################################
@@ -98,7 +97,7 @@ sub _initialize
 
   $self->_size();
   $self->{_set} = $self->{_first}->{_set};
-  return $self;
+  $self;
   }
 
 sub _size
@@ -110,7 +109,7 @@ sub _size
   $self->{_size} = $self->{_last} - $self->{_first};
   $self->{_size} = $self->{_size}->babs()->as_number();
   $self->{_size}++;
-  return $self;
+  $self;
   }
 
 #############################################################################
@@ -119,20 +118,20 @@ sub _size
 sub charset
   {
   my $self = shift;
-  return $self->{_first}->{_set};
+  $self->{_first}->{_set};
   }
 
 sub length
   {
   my $self = shift;
-  return $self->{_size};
+  $self->{_size};
   }
 
 sub is_reversed
   {
   # return true if the sequence is reversed, or false
   my $self = shift;
-  return $self->{_rev};
+  $self->{_rev};
   }
 
 sub first
@@ -145,7 +144,7 @@ sub first
       unless ref $self->{_first};
     $self->_size();
     }
-  return $self->{_first};
+  $self->{_first};
   }
 
 sub last
@@ -158,7 +157,7 @@ sub last
       unless ref $self->{_last};
     $self->_size();
     }
-  return $self->{_last};
+  $self->{_last};
   }
 
 sub string
@@ -193,13 +192,13 @@ sub string
       } 
     return if $n > $self->{_last} || $n < $self->{_first};
     }
-  return $n;
-  }
+  $n;
+  } 
 
 sub error
   {
-  my $x = shift;
-  return $x->{_set}->error();
+  my $self = shift;
+  $self->{_set}->error();
   }
 
 sub as_array
@@ -217,7 +216,7 @@ sub as_array
     {
     while ($f <= $l) { push @a,$f->copy(); $f->binc(); }
     }
-  return @a;
+  @a;
   }
 
 __END__
@@ -226,7 +225,7 @@ __END__
 
 =head1 NAME
 
-Math::String::Sequence - defines a sequence (or range) of strings.
+Math::String::Sequence - defines a sequence (range) of Math::String(s)
 
 =head1 SYNOPSIS
 
@@ -352,12 +351,17 @@ Beware, might create HUGE arrays!
 
 None discovered yet.
 
+=head1 LICENSE
+
+This program is free software; you may redistribute it and/or modify it
+under the same terms as Perl itself.
+
 =head1 AUTHOR
 
 If you use this module in one of your projects, then please email me. I want
 to hear about how my code helps you ;)
 
-This module is (C) Tels http://bloodgate.com 2001-2003.
+This module is (C) Tels http://bloodgate.com 2001 - 2005.
 
 =cut
 

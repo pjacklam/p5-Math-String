@@ -52,6 +52,8 @@ Math::String:
   * copy() is about 16% faster (due to simpler cache and streamlining)
 2004-11-20 1.26 Tels 662 tests
   * avoid caching wrong $CALC - load GMP rightaway
+2005-01-01 1.27 Tels 662 tests
+  * use register_callback to get notified by Math::BigInt on lib changes
 
 ############################################################################## 
 Math::String::Charset:
@@ -114,6 +116,7 @@ Math::String::Charset:
   * streamlined str2num() to make "new()" faster
   * streamlined num2str() to make "bstr()" faster
   * remove GMP lib (let caller decide)
+
    
 ############################################################################## 
 Math::String::Charset::Grouped:
@@ -151,4 +154,6 @@ Math::String::Sequence:
 2003-07-26 1.04 added lib => 'GMP'
 		removed shebang line
 2004-11-20 0.05: remove GMP lib (let caller decide)
+2005-01-01 0.06: remove a couple of needless return statements
+
 
