@@ -8,7 +8,7 @@ BEGIN
   $| = 1;
   # chdir 't' if -d 't';
   unshift @INC, '../lib'; # to run manually
-  plan tests => 30;
+  plan tests => 31;
   }
 
 use Math::String::Sequence;
@@ -70,4 +70,7 @@ ok ($a[0],'aa');
 ok ($a[-1],'cc');
 ok ($a[-2],'cb');
 ok ($a[1],'ab');
+
+# test error()
+ok ($seq->error(),'');
 

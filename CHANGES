@@ -19,6 +19,8 @@ Math::String:
 2001-05-13 1.11: added accuracy/precision/fallback/rnd_mode and tests for this
 2001-07-08 1.12: added bnan(), binf(), fixed $x->bzero(), added test for these
 		 fixed bug in copy() code in from_number() 
+2001-07-26 1.13: new( { str => 'abc', num => '123' } );
+2001-08-08 1.14: bstr() was not caching string form, some more tests
 
 ############################################################################## 
 Math::String::Charset:
@@ -38,6 +40,7 @@ Math::String::Charset:
 		 	renamed type() to order()
 		 	documented that length() always returns count of chars
 2000-03-25 1.08: added: next(), prev() for simple charsets (cache in M::S)
+2000-06-26 1.09: fixed: bug accessing BigInt's internals, fails for BitVect etc
 
 ############################################################################## 
 Math::String::Sequence:
