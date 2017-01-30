@@ -109,7 +109,7 @@ sub _initialize
       {
       $s->{$c} = 1 if @{$bi->{$c}} > 0;
       }
-    $self->{_start} = sort keys %$s;
+    $self->{_start} = [ sort keys %$s ];
     }
 
   # make copy

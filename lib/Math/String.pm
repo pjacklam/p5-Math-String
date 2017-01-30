@@ -29,7 +29,7 @@ use Math::BigInt;
 use Math::String::Charset;
 use strict;
 use vars qw($VERSION $AUTOLOAD $accuracy $precision $div_scale $round_mode);
-$VERSION = 1.16;    # Current version of this package
+$VERSION = 1.17;    # Current version of this package
 require  5.005;     # requires this Perl version or later
 
 $accuracy   = undef;
@@ -54,7 +54,7 @@ my $CALC;
  
 BEGIN
   {
-  $CALC = Math::BigInt::_core_lib();
+  $CALC = Math::BigInt->config()->{lib};
   }
 
 # some shortcuts for easier life
