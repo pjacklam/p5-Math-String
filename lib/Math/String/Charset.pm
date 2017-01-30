@@ -1,7 +1,7 @@
 #############################################################################
 # Math/String/Charset.pm -- package which defines a charset for Math/String
 #
-# Copyright (C) 1999-2004 by Tels. All rights reserved.
+# Copyright (C) 1999-2008 by Tels. All rights reserved.
 #############################################################################
 
 package Math::String::Charset;
@@ -14,11 +14,11 @@ BEGIN
   }
 
 use vars qw($VERSION);
-$VERSION = '1.16';	# Current version of this package
-require  5.005;		# requires this Perl version or later
+$VERSION = '1.17';	# Current version of this package
+require  5.008003;	# requires this Perl version or later
 
 use strict;
-use Math::BigInt lib => 'GMP';
+use Math::BigInt;
 
 use vars qw/$die_on_error $CALC/;
 $die_on_error = 1;		# set to 0 to not die
@@ -2402,7 +2402,7 @@ None doscovered yet.
 If you use this module in one of your projects, then please email me. I want
 to hear about how my code helps you ;)
 
-This module is (C) Copyright by Tels http://bloodgate.com 2000-2003.
+This module is (C) Copyright by Tels http://bloodgate.com 2000-2008.
 
 =cut
 

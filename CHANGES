@@ -1,6 +1,11 @@
 
-Complete version history
-========================
+2008-04-03 1.28 Tels 662 tests
+  * do not use "lib => GMP", instead let the user decide which lib we take
+  * bundle Module::Install and amend Makefile.PL
+  * require Math::BigInt v1.87
+
+Older version history:
+======================
 
 ############################################################################## 
 Math::String:
@@ -54,7 +59,6 @@ Math::String:
   * avoid caching wrong $CALC - load GMP rightaway
 2005-01-01 1.27 Tels 662 tests
   * use register_callback to get notified by Math::BigInt on lib changes
-
 ############################################################################## 
 Math::String::Charset:
 
