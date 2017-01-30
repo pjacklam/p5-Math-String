@@ -1,22 +1,21 @@
 #!/usr/bin/perl -w
 
 #############################################################################
-# Math/String/Charset.pm -- package which defines a charset for Math/String
+# Math/String/Charset/Nested -- charsets for Math/String
 #
 # Copyright (C) 1999-2001 by Tels. All rights reserved.
 #############################################################################
 
-package Math::String::Charset;
-use base Exporter;
-@EXPORT_OK = qw/SIMPLE analyze/;
+# todo: tri-grams etc
+#       store counts for different end-chars at the max elemt of _count?
+#       if we later need to calculate further, we could pick up there and need
+#       not to re-calculate the lower numbers
 
-BEGIN
-  {
-  *analyze = \&study;
-  }
+package Math::String::Charset::Nested;
+use base Math::String::Charset;
 
 use vars qw($VERSION);
-$VERSION = 1.11;	# Current version of this package
+$VERSION = 0.01;	# Current version of this package
 require  5.005;		# requires this Perl version or later
 
 use strict;
@@ -25,95 +24,31 @@ use Math::BigInt;
 use vars qw/$die_on_error/; 
 $die_on_error = 1;		# set to 0 to not die
 
-use constant SIMPLE => 1;
-
-use Math::String::Charset::Nested;
-use Math::String::Charset::Grouped;
-
 # following hash values are used:
 # _clen  : length of one character (all chars must have same len unless sep)
 # _start : contains array of all valid start characters
 # _ones  : list of one-character strings (cross of _end and _start)
 # _end   : contains hash (for easier lookup) of all valid end characters
-# _order : = 1
-# _type  : = 0
+# _order : 1,2,3.. etc, 1 => simple, 2 => bigram etc
+# _type  : 0 => simple or bi-gram, 1 => grouping
 # _error : error message or ""
 # _count : array of count of different strings with length x
 # _sum   : array of starting number for strings with length x
 #          _sum[x] = _sum[x-1]+_count[x-1]
 # _cnt   : number of elements in _count and _sum (as well as in _scnt & _ssum)
 # _cnum  : number of characters in _ones as BigInt (for speed)
-# _minlen: minimum string length (anything shorter is invalid), default -inf
+# _minlen: minimum string length (anything shorter is invalid), default 0
 # _maxlen: maximum string length (anything longer is invalid), default undef
 
 # simple ones:
 # _sep  : separator string (undef for none)
 # _map  : mapping character to number
 
-# higher orders (not used here):
-# _sets : list of charsets for the different positions
+# higher orders:
 # _bi   : hash with refs to array of bi-grams
 # _bmap : hash with refs to hash of bi-grams
 # _scnt : array of hashes, count of strings starting with this character
 # _sm	: hash w/ mapping of start characters for faster lookup
-
-sub new
-  {
-  my $class = shift;
-  $class = ref($class) || $class || __PACKAGE__;
-  my $self = {};
-  bless $self, $class;
-  my $value;
-  if (!ref($_[0]))
-    {
-    $value = [ @_ ];
-    }
-  else
-    {
-    $value = shift;
-    }
-  if (ref($value) !~ /^(ARRAY|HASH)$/)
-    {
-    # got an object, so make copy
-    foreach my $k (keys %$value)
-      {
-      if (ref($value->{$k}) eq 'ARRAY')
-        {
-        $self->{$k} = [ @{$value->{$k}} ];
-        }
-      elsif (ref($value->{$k}) eq 'HASH')
-        {
-        foreach my $j (keys %{$value->{k}})
-          {
-          $self->{$k}->{$j} = $value->{$k}->{$j};
-          }
-        }
-      else
-        {
-        $self->{$k} = $value->{$k};
-        }
-      }
-    return $self; 
-    }
-  # convert ARRAY ref into HASH ref in the same go
-  $value = $self->_check_params($value);	
-#  print "new $class type $self->{_type} order $self->{_order} $self->{_error}\n";
-  if ($self->{_error} eq '')
-    {
-    # now route request for initialization to subclasses if we are in baseclass
-    if ($class eq 'Math::String::Charset')
-      {
-      return Math::String::Charset::Grouped->new($value)
-        if ($self->{_type} != 0);
-      return Math::String::Charset::Nested->new($value)
-        if ($self->{_order} > 1);
-      }
-    $self->_strict_check($value);
-    $self->_initialize($value);
-    } 
-  die ($self->{_error}) if $die_on_error && $self->{_error} ne '';
-  return $self; 
-  }
 
 #############################################################################
 # private, initialize self 
@@ -127,117 +62,121 @@ sub _strict_check
   return $self->{_error} = "Wrong type '$self->{_type}' for __PACKAGE__"
     if $self->{_type} != 0;
   return $self->{_error} = "Wrong order'$self->{_order}' for __PACKAGE__"
-    if $self->{_order} != 1;
+    if $self->{_order} != 2;
   foreach my $key (keys %$value)
     {
     return $self->{_error} = "Illegal parameter '$key' for __PACKAGE__"
-      if $key !~ /^(start|minlen|maxlen|sep)$/;
+      if $key !~ /^(start|minlen|maxlen|sep|bi|end|charlen)$/;
     }
-  }
-
-sub _check_params
-  {
-  # check params
-  my $self = shift;
-  my $value = shift;
-
-  $self->{_error} = ""; 			# no error
-  $self->{_count} = [ ];
-
-  # convert array ref to hash	
-  $value = { start => $value } if (ref($value) eq 'ARRAY');
-
-  # from 1st take clen
-  $self->{_clen} = $value->{charlen};
-  $self->{_sep} = $value->{sep};
-  
-  return $self->{_error} = "Can not have both 'sep' and 'charlen' in new()"
-    if ((exists $value->{charlen}) && (exists $value->{sep}));
-
-  $self->{_order} = $value->{order}; 
-  $self->{_type} = $value->{type};
-
-  return $self->{_error} = "Can not have both 'bi' and 'sets' in new()"
-    if ((exists $value->{sets}) && (exists $value->{bi}));
-  
-  if (!defined $self->{_type})
-    {
-    $self->{_type} = 0;
-    $self->{_type} = 1 if exists $value->{sets};
-    }
-  
-  if (!defined $self->{_order})
-    {
-    $self->{_order} = 1;
-    $self->{_order} = 2 if exists $value->{bi};
-    }
-
-  return $self->{_error} = "Illegal type '$self->{_type}' used with 'bi'"
-    if ((exists $value->{bi}) && ($self->{_type} != 0));
-
-  return $self->{_error} = "Illegal type '$self->{_type}' used with 'sets'"
-    if ((exists $value->{sets}) && ($self->{_type} == 0));
-
-  return $self->{_error} = "Illegal type '$self->{_type}'"
-   if (($self->{_type} != 0) && ($self->{_type} != 1)); 
-
-  return $self->{_error} =
-   "Illegal combination of type '$self->{_type}' and order '$self->{_order}'"
-    if (($self->{_type} == 1) && ($self->{_order} != 1));
-
-  return $self->{_error} =
-   "Illegal combination of order '$self->{_order}' and 'end'"
-    if (($self->{_order} == 1) && (defined $value->{end}));
-  
-  return $self->{_error} =
-   "Illegal combination of order '$self->{_order}' and 'bi'"
-    if (($self->{_order} == 1) && (defined $value->{bi}));
-
-  return $self->{_error} = "Illegal order '$self->{_order}'"
-   if (($self->{_order} < 1) || ($self->{_order} > 2)); 
-
-  $self->{_sep} = $value->{sep};			# sep char or undef
-  return $self->{_error} = "Field 'sep' must not be empty" 
-    if (defined $self->{_sep} && $self->{_sep} eq '');
-
-  $self->{_minlen} = $value->{minlen};
-  $self->{_maxlen} = $value->{maxlen};
-  $self->{_minlen} = Math::BigInt->binf('-') if !defined $self->{_minlen};
-  $self->{_maxlen} = Math::BigInt->binf() if !defined $self->{_maxlen};
-  return $self->{_error} = 'Maxlen is smaller than minlen!'
-   if ($self->{_minlen} > $self->{_maxlen});
-
-  return $value;
   }
 
 sub _initialize
   {
-  # init only for simple charsets, the rest is done in subclass
+  # set yourself to the value represented by the given string
   my $self = shift;
   my $value = shift;
 
-  $self->{_start} = [ ];
-  $self->{_start} = [ @{$value->{start}} ] if defined $value->{start};
-
-  $self->{_clen} = CORE::length($self->{_start}->[0])
-   if !defined $self->{_sep};
-  
-  $self->{_ones} = $self->{_start};
-  foreach (@{$self->{_start}}) { $self->{_end}->{$_} = 1; }
-  
-  # some more tests for validity
-  if (!defined $self->{_sep})
+  my $end = {}; 			# we make array later on
+  # add the user-specified end set
+  my $bi = $value->{bi} || {};
+  return $self->{_error} = "Field 'bi' must be hash ref"
+   if ref($bi) ne 'HASH';
+  $self->{_order} = 2;
+  # if no end set is defined, add all followers as default
+  if (exists $value->{end})
     {
-    foreach (@{$self->{_start}})
+    $end = { map { $_ => 1 } @{$value->{end}} };
+    }
+  else
+    {
+    foreach my $c (keys %$bi)
       {
-      $self->{_error} = "Illegal char '$_', length not $self->{_clen}"
-       if length($_) != $self->{_clen};
+      foreach my $f (@{$bi->{$c}})
+        {
+        $end->{$f} = 1;
+        }
       }
     }
+  if (exists $value->{start})
+    {
+    $self->{_start} = [ @{$value->{start}} ];
+    }
+  else
+    {
+    # else all chars w/ followers can start a string (longer than 2)
+    my $s = { };
+    foreach my $c (keys %$bi)
+      {
+      $s->{$c} = 1 if @{$bi->{$c}} > 0;
+      }
+    $self->{_start} = sort keys %$s;
+    }
+
+  # make copy
+  foreach my $c (keys %$bi)
+    {
+    $self->{_bi}->{$c} = [ @{$bi->{$c}} ]; 	# make copy 
+    }
+  if (!defined $self->{_sep})
+    {
+    foreach my $c (keys %$bi)
+      {
+      $self->{_clen} = CORE::length($c);
+      last;
+      }
+    }
+  # add empty array for chars with no followers
+  $bi = $self->{_bi};
+  my @keys = keys %$bi;		# make copy since keys may be modified (necc?)
+  foreach my $c (@keys)
+    {
+    $end->{$c} = 1 if @{$bi->{$c}} == 0;	# no follower
+
+    foreach my $f (@{$bi->{$c}})
+      {
+      $self->{_bi}->{$f} = [] if !defined $self->{_bi}->{$f};
+      $end->{$f} = 1 if @{$bi->{$f}} == 0;
+      if (!defined $self->{_sep})
+        {
+        return $self->{_error} = "Illegal char '$f', length not $self->{_clen}"
+          if length($f) != $self->{_clen};
+        }
+      }
+    }
+
+  $self->{_end} = $end;
+  # build _ones and _sm list (cross from start/end)
+  $self->{_ones} = [];
+  $self->{_sm} = {};
+  foreach (@{$self->{_start}})
+    {
+    push @{$self->{_ones}}, $_ if exists $end->{$_};
+    $self->{_sm}->{$_} = 1;
+    }
+#  print "ones => ",join(' ',@{$self->{_ones}}),"\n";
+  # remove anything from start with no followers, but keep original order
+  my @s;
+  foreach my $c (@{$self->{_start}})
+    {
+    push @s, $c 
+     if ((!defined $self->{_bi}->{$c}) || (@{$self->{_bi}->{$c}} > 0));
+    }
+  $self->{_start} = \@s;
+
   # initialize array of counts for len of 0..1
   $self->{_cnt} = 1;				# cached amount of class-sizes
   $self->{_count}->[0] = 1;			# '' is one string
   $self->{_count}->[1] = Math::BigInt->new (scalar @{$self->{_ones}});	# 1
+
+  # initialize array of counts for len of 2
+  $end = $self->{_end};
+  my $count = Math::BigInt::bzero();
+  foreach my $c (keys %$bi)
+    {
+    $count += scalar @{$bi->{$c}} if exists $end->{$c};
+    }
+  $self->{_count}->[2] = $count;					# 2
+  $self->{_cnt}++;	# adjust cache size
 
   # init _sum array
   $self->{_sum}->[0] = 0;
@@ -250,185 +189,184 @@ sub _initialize
     {
     $self->{_map}->{$_} = $i++;
     }
+  # create mapping for is_valid (contains number of follower)
+  foreach my $c (keys %{$self->{_bi}})	# for all chars
+    {
+    my $i = 0;
+    foreach my $cf (@{$self->{_bi}->{$c}})	# for all followers
+      {
+      $self->{_bmap}->{$c}->{$cf} = $i++;	# make hash for easier lookup
+      }
+    }
+    
+  # init _scnt array ([0] not used in both)
+  $self->{_scnt}->[1] = {};
+  #foreach my $c (keys %{$self->{_map}})	# it's nearly the same
+  #  {
+  #  $self->{_ssum}->[1]->{$c} = $self->{_map}->{$c} - 1;
+  #  }
+
+  # class 1
+  foreach my $c (@{$self->{_start}})
+    {
+    $self->{_scnt}->[1]->{$c} = 1		# exactly one for each char
+     if exists $self->{_end}->{$c};		# but not for invalid's
+    }
+  # class 2
+  my $last = Math::BigInt::bzero();	
+  foreach my $c (keys %{$self->{_bi}})		# for each possible character
+    {
+    my $cnt = 0;
+    foreach my $cf (@{$bi->{$c}})		# for each follower
+      {
+      $cnt ++ if exists $self->{_end}->{$cf};	# that can end the string	
+      }
+    $self->{_scnt}->[2]->{$c} = $cnt;		# store
+    $last += $cnt				# next one is summed up
+     if exists $self->{_sm}->{$c};		# if starting with valid char
+    }
+  # print $self->{_count}->[2]||0," should already be $last\n";
+  $self->{_count}->[2] = $last;			# all in class #2
+  $self->{_cnt} = 2;				# cache size for bi is one more
   $self->{_cnum} = Math::BigInt->new( scalar @{$self->{_ones}} );
-
-  return $self->{_error} = "Empty charset!"
-   if ($self->{_cnum}->is_zero() && $self->{_minlen} > 0);
-
+  if ($self->{_cnum}->is_zero())
+    {
+    $self->{_minlen} = 2 if $self->{_minlen} == 1;	# no one's
+    # check whether charset can have 2-character long strings
+    if ($self->{_count}->[2] == 0)
+      {
+      $self->{_minlen} = 3 if $self->{_minlen} == 2;	# no two's
+      # check whether some path from start to end set exists, if not: empty
+      $self->_min_path_len();
+      }
+    }
   return $self;
   }
 
-sub zero
+sub _min_path_len
   {
-  # return the string representing zero. If no minlen is defined, this is
-  # simple '', otherwise the first string of the first class after minlen which
-  # is not empty
+  # for n-grams calculate the minimum path len
+  # Starting with each character in the start set, traverse the n-gram tree
+  # until it arrives at one of the end characters. The count between is the
+  # length of the shortes valid string.
+  # This might be greater than the length the user specified, because it is
+  # possible to have no shorter strings due to restrictions.
   my $self = shift;
 
-  return $self->{_zero} if defined $self->{_zero};	# already known?
-
-  return '' if $self->{_minlen} > 0;
-  my $i = $self->{_minlen};
-  while ($self->class($i) == 0) { $i++; }
-  $self->{_minlen} = $i;				# adjust minlen
-  $self->{_zero} = $self->first($i);
-  return $self->{_zero};
-  }
-
-sub one
-  {
-  # return the string representing one. If no minlen is defined, this is
-  # simple the first string with length(1), otherwise the first string of the
-  # first class after minlen which is not empty
-  my $self = shift;
-
-  return '' if $self->{_minlen} > 0;
-  my $i = $self->{_minlen};
-  while ($self->class($i) == 0) { $i++; }
-  $self->{_minlen} = $i;				# adjust minlen
-  return $self->first($i)->next();
-  }
-
-sub count
-  {
-  # Return count of all possible strings described by in charset as positive
-  # bigint. Returns 'inf' if no maxlen is defined, because there should be no
-  # upper bound on how many strings are possible.
-  # if maxlen is defined, forces a calculation of all possible class() values
-  # and may therefore be slow on the first call, also caches possible lot's of
-  # values.
-  my $self = shift;
-  my $count = Math::BigInt->bzero();
-
-  return $count->binf() if $self->{_maxlen}->is_inf();
-
-  for (my $i = 0; $i < $self->{_maxlen}; $i++)
-    {
-    $count += $self->class($i);
-    }
-  return $count;
+  # these are already know, and if non-zero, we already have minlen
+  return if $self->class(1) != 0 || $self->class(2) != 0;
+  
+  my $minlen = $self->{_minlen} || 3;	# either the defined min len, or 3
   }
 
 sub dump
   {
   my $self = shift;
   
-  print "type SIMPLE:\n";
+  print "type: BIGRAM:\n";
+  my $bi = $self->{_bi};
+  foreach my $c (keys %$bi)
+    {
+    print " $c => [";
+    foreach my $f (@{$bi->{$c}})
+      {
+      print "'$f', ";
+      }
+    print "]\n";
+    }
   print "start: ", join(' ',@{$self->{_start}}),"\n";
   print "end  : ", join(' ',keys %{$self->{_end}}),"\n";
   print "ones : ", join(' ',@{$self->{_ones}}),"\n";
-  }
-
-sub error
-  {
-  my $self = shift;
- 
-  return $self->{_error};
-  }
-
-sub order
-  {
-  # return charset's order/class
-  my $self = shift;
-  return $self->{_order};
-  }
-
-sub type
-  {
-  # return charset's type
-  my $self = shift;
-  return $self->{_type};
-  }
-
-sub charlen
-  {
-  # return charset's length of one character
-  my $self = shift;
-  return $self->{_clen};
-  }
-
-sub length
-  {
-  # return number of characters in charset
-  my $self = shift;
-
-  return scalar @{$self->{_ones}};
   }
 
 sub _calc
   {
   # given count of len 1..x, calculate count for y (y > x) and all between
   # x and y
+  # currently re-calcs from 2 on, we could save the state and only calculate
+  # the missing counts.
+
   my $self = shift;
   my $max = shift || 1; $max = 1 if $max < 1;
   return if $max <= $self->{_cnt};
 
-  my $i = $self->{_cnt}; 		# last defined element
-  my $last = $self->{_count}->[$i];
-  my $size = Math::BigInt->new ( scalar @{$self->{_ones}} );
+#  my ($counts,$org_counts);
+  # map to hash
+#  my $end = $self->{_end};
+#  %$counts = map { $_, $end->{$_} } keys %$end; 	# make copy
+
+  my ($c,$cf,$cnt,$last,$count);	
+  my $i = $self->{_cnt}+1;		# start with next undefined level
   while ($i <= $max)
     {
-    $last = $last * $size;
-    $self->{_count}->[$i+1] = $last; 
-    $self->{_sum}->[$i+1] = $self->{_sum}->[$i] + $self->{_count}->[$i];
+    # take current level, calculate all possible ending characters
+    # and count them (e.g. 2 times 'b', 2 times 'c' and 3 times 'a')
+    # each of the ending chars has a number of possible bi-grams. For the next
+    # length, we must add the count of the ending char to each of the possible
+    # bi-grams. After this, we get the new count for all new ending chars.
+  #  %$org_counts = map { $_, $counts->{$_} } keys %$counts; 	# make copy
+  #  $counts = {};						# init to 0
+  #  $cnt = Math::BigInt::bzero();
+  #  # for each of the ending chars
+  #  foreach my $char (keys %$org_counts)
+  #    {
+  #    # and for each of it's bigrams
+  #    $c = $org_counts->{$char};			# speed up
+  #    foreach my $ec ( @{$self->{_bi}->{$char}})
+  #      {
+  #      # add to the new ending char the number of possibilities
+  #      $counts->{$ec} += $c;
+  #      }
+  #    # now sum them up by multiplying bi-grams times org_char count
+  #    $cnt += @{$self->{_bi}->{$char}} * $org_counts->{$char};
+  #    }
+  #  $self->{_count}->[$i] = $cnt;	# store this level
+    #print "$i => $self->{_count}->[$i]\n";
+
+    #########################################################################
+    # for each starting char, add together how many strings each follower
+    # starts in level-1
+    # print "level $i\n";
+    $last = Math::BigInt::bzero();	
+    $count = Math::BigInt::bzero();		# all counts
+    my $bi = $self->{_bi};
+    foreach my $c (keys %$bi)			# for each possible char
+      {
+      my $cnt = 0;
+      foreach my $cf (@{$bi->{$c}})		# for each follower
+        {
+        my $ci = $self->{_scnt}->[$i-1]->{$cf} || 0;
+#	print "$c followed by $cf $ci times\n",	
+        $cnt += $ci;				# add count in level-1
+        }
+      $self->{_scnt}->[$i]->{$c} = $cnt;	# store
+#      $self->{_ssum}->[$i]->{$c} = $last;	# store sum up to here
+      $last += $cnt;				# next one is summed up
+      $count += $cnt if exists $self->{_sm}->{$c};	# only valid starts	
+#      print "last $last count $count cnt $cnt\n";
+      }
+    $self->{_count}->[$i] = $count;		# all in class w/ valid starts
+    $self->{_sum}->[$i] = $self->{_count}->[$i-1] + $self->{_sum}->[$i-1];
+
+#    $last = Math::BigInt->bzero();		# set to 0
+#    foreach $c (@{$self->{_start}})
+#      {
+#      $cnt = Math::BigInt->bzero();		# number of followers
+#      foreach $cf (@{$self->{_bi}->{$c}})	# for each follower
+#        {
+#        my $ci = $self->{_scnt}->[$i-1]->{$cf} || 0;	
+#        print "$c $cnt += ",$ci," ($cf)\n";
+#        $cnt += $ci;				# add count in level-1
+#        }
+#      $self->{_scnt}->[$i]->{$c} = $cnt;	# and store it
+#      $self->{_ssum}->[$i]->{$c} = $last;	# store sum up to here
+#      $last += $cnt;				# next one is summed up
+#      }
+#    $self->{_count}->[$i] = $last;		# sum of all strings
+#    $self->{_sum}->[$i] = $self->{_count}->[$i-1] + $self->{_sum}->[$i-1];
     $i++;
     }
-  $self->{_cnt} = $i-1;		# store new cache size
-  return;
-  }
-
-sub class
-  {
-  # return number of all combinations with a certain length
-  my $self = shift;
-  my $len = shift; $len = 0 if !defined $len;
-  $len = abs(int($len));
-
-  return 0 if $len < $self->{_minlen} || $len > $self->{_maxlen};
-
-  # print "$len $self->{_minlen}\n"; 
-  $len -= $self->{_minlen} if $self->{_minlen} > 0;	# correct 
-  # not known yet, so calculate and cache
-  $self->_calc($len) if $self->{_cnt} < $len;
-  return $self->{_count}->[$len];
-  }
-
-sub lowest
-  {
-  # return number of first string with $length characters
-  # equivalent to $charset->first($length)->num2str();
-  my $self = shift;
-  my $len = abs(int(shift || 1));
-  
-  # not known yet, so calculate and cache
-  $self->_calc($len) if $self->{_cnt} < $len;
-  return $self->{_sum}->[$len];
-  }
-
-sub highest
-  {
-  # return number of first string with $length characters
-  # equivalent to $charset->first($length)->num2str();
-  my $self = shift;
-  my $len = abs(int(shift || 1));
-  
-  $len++;
-  # not known yet, so calculate and cache
-  $self->_calc($len) if $self->{_cnt} < $len;
-  return $self->{_sum}->[$len]-1;
-  }
-
-sub norm
-  {
-  # normalize a string by removing separator char at front/end
-  my $self = shift;
-  my $str = shift;
-
-  return $str if !defined $self->{_sep};
-
-  $str =~ s/$self->{_sep}$//;
-  $str =~ s/^$self->{_sep}//;
-  return $str;
+  $self->{_cnt} = $i-1;				# store new cache size
   }
 
 sub is_valid
@@ -439,13 +377,9 @@ sub is_valid
 
   # print "$str\n";
   return 0 if !defined $str;
-  if ($str eq '')
-    {
-    return 1 if $self->{_minlen} <= 0;
-    return 0;
-    }
+  return 1 if $str eq '' && $self->{_minlen} <= 0;
 
-  my $int = Math::BigInt->bzero();
+  my $int = Math::BigInt::bzero();
   my @chars;
   if (defined $self->{_sep})
     {
@@ -468,101 +402,49 @@ sub is_valid
   # valid start char?
   my $map = $self->{_map};
   return 0 unless exists $map->{$chars[0]};
-  foreach (@chars)
+  # check if conforms to bi-grams
+  return 1 if @chars == 1;
+  # further checks for strings longer than 1
+  my $i = 1; 				# start at second char
+  $map = $self->{_bmap};
+  while ($i < @chars)
     {
-    return 0 unless exists $map->{$_};
+    #print "is valid $i $chars[$i-1] $chars[$i]\n";
+#    print "$chars[$i-1] $chars[$i]: ",
+ #     $map->{$chars[$i-1]} || 'undef'," ",
+ #     $map->{$chars[$i-1]}->{$chars[$i]} || 'undef',"\n";
+    return 0 unless exists $map->{$chars[$i-1]};
+    return 0 unless exists $map->{$chars[$i-1]}->{$chars[$i]};
+    $i++;
     }
   return 1;
   }
 
-sub minlen
-  {
-  my $self = shift;
-
-  return $self->{_minlen};
-  }
-
-sub maxlen
-  {
-  my $self = shift;
-
-  return $self->{_maxlen};
-  }
-
-sub start
-  {
-  # this returns all the starting characters in a list, or in case of a simple
-  # charset, simple the charset
-  # in scalar context, returns length of starting set, for simple charsets this
-  # equals the length
-  my $self = shift;
-
-  return wantarray ? @{$self->{_start}} : scalar @{$self->{_start}};
-  }
-      
-sub end
-  {
-  # this returns all the end characters in a list, or in case of a simple
-  # charset, simple the charset
-  # in scalar context, returns length of end set, for simple charsets this
-  # equals the length
-  my $self = shift;
-
-  return wantarray ? sort keys %{$self->{_end}} : scalar keys %{$self->{_end}};
-  }
-
-sub ones
-  {
-  # this returns all the one-char strings (in scalar context the count of them)
-  my $self = shift;
-
-  return wantarray ? @{$self->{_ones}} : scalar @{$self->{_ones}};
-  }
-
 sub num2str
   {
-  # convert Math::BigInt/Math::String to string
-  # in list context return string and stringlen 
+  # convert Math::BigInt/Math::String to string 
   my $self = shift;
   my $x = shift;
 
-  $x = new Math::BigInt($x) unless ref $x;
-
+  $x = new Math::BigInt($x) unless ref $x; 
   return undef if ($x->sign() !~ /^[+-]$/);
   if ($x->is_zero())
     {
-    return wantarray ? ('',0) : ''; 
+    return wantarray ? ('',0) : '';
     }
-  my $j = $self->{_cnum};			# nr of chars
+  my $j = $self->{_cnum};                       # nr of chars
 
   if ($x <= $j)
     {
-    my $c = $self->{_ones}->[$x-1];
-    return wantarray ? ($c,1) : $c; 		# string len == 1
+    my $c =  $self->{_ones}->[$x-1];
+    return wantarray ? ($c,1) : $c;             # string len == 1
     }
 
-  my $digits = $self->chars($x); my $d = $digits;
+  my $digits = $self->chars($x); my $d = $digits; 
+ 
   # now treat the string as it were a zero-padded string of length $digits
 
-  my $es="";                    		# result
-  # copy input, make positive number, correct to $digits and cater for 0
-  my $y = Math::BigInt->new($x); $y->babs(); 
-  #print "fac $j y: $y new: ";
-  $y -= $self->{_sum}->[$digits];
-
-  #print "y: $y\n";
-  my $mod = 0; my $s = $self->{_sep}; $s = '' if !defined $s;
-  while (!$y->is_zero())
-    {
-    #print "bfore:  y/fac: $y / $j \n";
-    ($y,$mod) = $y->bdiv($j);
-    $es = $self->{_ones}->[$mod] . $s.$es;
-    #print "after:  div: $y rem: $mod \n";
-    $digits --;				# one digit done
-    }
-  # padd the remaining digits with the zero-symbol
-  $es = ($self->{_ones}->[0].$s) x $digits . $es if ($digits > 0);
-  $es =~ s/$s$//;				# strip last sep 'char'
+  my $es = "num2str() for bi-grams not ready yet";
   return wantarray ? ($es,$d) : $es;
   }
 
@@ -572,62 +454,47 @@ sub str2num
   my $self = shift;
   my $str = shift;			# simple string
 
-  my $int = Math::BigInt->bzero();
+  my $int = Math::BigInt::bzero();
   my $i = CORE::length($str);
 
   return $int if $i == 0;
   my $map = $self->{_map};
-  my $clen = $self->{_clen} || 0;	# len of one char
+  my $clen = $self->{_clen};		# len of one char
   return new Math::BigInt($map->{$str}) if $i == $clen;
-  my $j = $self->{_cnum};		# nr of chars as BigInt
-  my $mul = $int+1; 			# 1
   if (!defined $self->{_sep})
     {
-    $i -= $clen;
-    while ($i >= 0)
+    my $class = $i / $clen;
+    $self->_calc($class) if $class > $self->{_cnt};	# not yet cached?
+    $int = $self->{_sum}->[$class];			# base number
+    # print "base $int class $class\n";
+    $i = $clen; $class--; 
+    # print "start with pos $i, class $class\n";
+    while ($class > 0)
       {
-      $int += $mul * $map->{substr($str,$i,$clen)};
-      $mul *= $j;
-      $i -= $clen;
+      $int += $self->{_ssum}->[$class]->{substr($str,$i,$clen)};
+      # print "$i $class $int ",substr($str,$i,$clen)," ",
+      # $self->{_ssum}->[$class]->{substr($str,$i,$clen)},"\n";
+      $class --;
+      $i += $clen;
       #print "s2n $int j: $j i: $i m: $mul c: ",
       #substr($str,$i+$clen,$clen),"\n";
       }
+    # print "$int\n";
     }
   else
     {
-    # with sep char
+    # sep char
     my @chars = split /$self->{_sep}/, $str;
     shift @chars if $chars[0] eq '';			# strip leading sep
-    #pop @chars if $chars[-1] eq $self->{_sep};	# strip trailing sep
-    foreach (reverse @chars)	
+    my $class = scalar @chars;
+    foreach (@chars)
       {
-      $int += $mul * $map->{$_};
-      $mul *= $j;
+      $int += $self->{_ssum}->[$class]->{$_};
+      $class --;
+      # print "$class $int\n";
       }
     }
   return $int;
-  }
-
-sub char
-  {
-  # return nth char from charset (see also map())
-  my $self = shift;
-  my $char = shift || 0;
- 
-  return undef if $char > scalar @{$self->{_ones}}; # dont create spurios elems
-  return $self->{_ones}->[$char];
-  }
-
-sub map
-  {
-  # map char to number (see also char())
-  my $self = shift;
-  my $char = shift;
-
-  return undef if !defined $char;
- 
-  return undef unless exists $self->{_map}->{$char};
-  return $self->{_map}->{$char}-1;
   }
 
 sub chars
@@ -635,21 +502,11 @@ sub chars
   # return number of characters in output string
   my $self = shift;
   my $x = shift;
- 
-  return 0 if $x->is_zero() || $x->is_nan() || $x->is_inf();
-  my $i = 1;
-  my $y = $x->as_number()->babs();
 
-# print "chars ",caller(),"\n";
-  while ($y >= $self->{_sum}->[$i])
-    {
-    print "cnt: $self->{_cnt} for $i ";
-    $self->_calc($i) if $self->{_cnt} < $i;
-    print "sum: $self->{_sum}->[$i]\n";
-    $i++;
-    }
-  $i--;	# correct for ++
-  print "return $i\n";
+  return 0 if $x->is_zero() || $x->is_nan() || $x->is_inf();
+
+  my $i = 1;
+  # not done yet
   return $i;
   }                  
 
@@ -662,10 +519,59 @@ sub first
   return if defined $self->{_maxlen} && $count > $self->{_maxlen};
   return '' if $count == 0;
 
-  my $t = ($self->{_sep}||'') . $self->{_ones}->[0];
-  my $es = $t x $count;
-  $es =~ s/^$self->{_sep}// if defined $self->{_sep};
-  return $es;
+  return $self->{_ones}->[0] if $count == 1;
+  my $f;
+  foreach my $c (@{$self->{_start}})
+    {
+    $f = $self->_first('',$c,1,$count);
+    return $f if defined $f;
+    }
+  return;
+  }
+
+sub _first
+  {
+  # recursively check followers whether they are okay, or not
+  # $self, $f, $ending, $level, $count,
+
+  my ($self,$f,$ending,$level,$count) = @_;
+
+  if ($level >= $count)				# overshot
+    {
+    return $f.$ending if exists $self->{_end}->{$ending};	
+    return;
+    }
+
+  return if !exists $self->{_bi}->{$ending};
+  foreach my $c (@{$self->{_bi}->{$ending}})
+    {
+    my $rc = $self->_first($f.$ending,$c,$level+1,$count);
+    return $rc if defined $rc;
+    }
+  return;					# found nothing
+  }
+
+sub _last
+  {
+  # recursively check followers whether they are okay, or not
+  # $self, $f, $ending, $level, $count,
+
+  my ($self,$f,$ending,$level,$count) = @_;
+
+  if ($level >= $count)				# overshot
+    {
+    return $f.$ending if exists $self->{_end}->{$ending};	
+    return;
+    }
+
+  return if !exists $self->{_bi}->{$ending};
+
+  foreach my $c (reverse @{$self->{_bi}->{$ending}})
+    {
+    my $rc = $self->_last($f.$ending,$c,$level+1,$count);
+    return $rc if defined $rc;
+    }
+  return;					# found nothing
   }
 
 sub last
@@ -677,10 +583,14 @@ sub last
   return if defined $self->{_maxlen} && $count > $self->{_maxlen};
   return '' if $count == 0;
 
-  my $t = ($self->{_sep}||'') . $self->{_ones}->[-1];
-  my $es = $t x $count;
-  $es =~ s/^$self->{_sep}// if defined $self->{_sep};
-  return $es;
+ return $self->{_ones}->[-1] if $count == 1;
+  my $f;
+  foreach my $c (reverse @{$self->{_start}})
+    {
+    $f = $self->_last('',$c,1,$count);
+    return $f if defined $f;
+    }
+  return;
   }
 
 sub next
@@ -694,8 +604,7 @@ sub next
 #  print "next '$str'\n";
   if ($str->{_cache}->{str} eq '')				# 0 => 1
     {
-    my $min = $self->{_minlen}; $min = 1 if $min <= 0;
-    $str->{_cache}->{str} = $self->first($min); 
+    $str->{_cache}->{str} = $self->first($self->minlen()||1);
     return;
     }
 
@@ -705,36 +614,10 @@ sub next
   # then. Also, if the cached isn't used later, we would have spent the
   # update-time in vain.
 
-  # simple charsets
-  my $char;
-  my $clen = $self->{_clen};
-  my $s = \$str->{_cache}->{str};
-  if (defined $self->{_sep})
-    {
-    # split last part and replace
-    $$s =~ /$self->{_sep}?(.*?)$/; $char = $1;
-    }
-  else  
-    {
-    # extract last char and replace
-    $char = substr($$s,-$clen,$clen);
-    }
-  $char = $self->{_map}->{$char};	# map is +1 by default
-  if ((!defined $char) || ($char >= @{$self->{_start}}))
-    {
-    # overflow
-    $str->{_cache}->{str} = undef; return;
-    }
-  $char = $self->{_start}->[$char];	# num 2 char
-  if (defined $self->{_sep})
-    {
-    # split last part and replace
-    $$s =~ s/($self->{_sep}?)(.*?)$/$1$char/;
-    }
-  else
-    {
-    substr($$s,-$clen,$clen) = $char;
-    } 
+  # for higher orders not ready yet
+  $str->{_cache} = undef;
+  return;
+
   }
 
 sub prev
@@ -744,173 +627,25 @@ sub prev
 
   if ($str->{_cache}->{str} eq '')				# 0 => -1
     {
-    my $min = $self->{_minlen}; $min = -1 if $min >= 0;
-    $str->{_cache}->{str} = $self->first($min); 
+    $str->{_cache}->{str} = $self->first($self->minlen()||1);
     return;
     }
 
-  # simple charsets
-  my $char;
-  my $clen = $self->{_clen};
-  my $s = \$str->{_cache}->{str};
-  if (defined $self->{_sep})
-    {
-    # split last part and replace
-    $$s =~ /$self->{_sep}(.*?)$/; $char = $1;
-    }
-  else  
-    {
-    # extract last char and replace
-    $char = substr($$s,-$clen,$clen);
-    }
-  my $old = $char;	# for seperator replacement
-  if ((defined $char) && (exists $self->{_map}->{$char}))
-    {
-    $char = $self->{_map}->{$char}-2;		# map is +1 by default
-    if ($char < 0)
-      {
-      $str->{_cache}->{str} = undef; return; 	# underflow
-      }
-    }
-  else
-    {
-    $str->{_cache}->{str} = undef; return; 	# underflow if char not defined
-    }
-  $char = $self->{_start}->[$char];		# map num back to char
-  if (defined $self->{_sep})
-    {
-    $$s =~ s/$old$/$char/; 			# split last part and replace
-    }
-  else
-    {
-    substr($$s,-$clen,$clen) = $char;		# simple replace
-    } 
-  }
+  # for higher orders not ready yet
+  $str->{_cache} = undef;
+  return;
 
-sub merge
-  {
-  # merge yourself with another simple charset
-  my $self = shift;
-  my $other = shift;
-
-  return $self;
-  }
-
-###############################################################################
-
-sub study
-  {
-  # study a list of words and return a hash describing them
-  # study ( { order => $depth, words = \@words, sep => ''}, charlen => 1,
-  # hist => 1, );
-
-  my $arg;
-  if (ref $_[0] eq 'HASH')
-    {
-    $arg = shift;
-    }
-  else
-    {
-    $arg = { @_ };
-    }
-
-  my $depth = abs($arg->{order} || $arg->{depth} || 1);
-  my $words = $arg->{words} || [];
-  my $sep = $arg->{sep};
-  my $charlen = $arg->{charlen} || 1;
-  my $cut = $arg->{cut} || 0;
-  my $hist = $arg->{hist} || 0;
-
-  die "depth of study must be between 1..2" if ($depth < 1 || $depth > 2);
-  my $starts = {};              # word starts
-  my $ends = {};                # word ends
-  my $chars = {};               # for depth 1
-  my $bi = { }; my ($l,@chars,$x,$y,$word,$i);
-  foreach $word (@$words)
-    {
-    # count starting chars and ending chars
-    $starts->{substr($word,0,$charlen)} ++;
-    $ends->{substr($word,-$charlen,$charlen)} ++;
-    $l = CORE::length($word) / $charlen;
-    next if (int($l) != $l);			# illegal word
-    if ($depth == 1)
-      {
-      for (my $i = 0; $i < $l; $i += $charlen)
-        {
-        $chars->{substr($word,$i,$charlen)} ++;
-        }
-      next;					# next word
-      }
-    $l = $l - $depth + 1;
-    for ($i = 0; $i < $l; $i += $charlen)
-      {
-      $x = substr($word,$i,$charlen); $y = substr($word,$i+$charlen,$charlen);
-      $bi->{$x}->{$y} ++;
-      }
-    }
-  my $args = {};
-  my (@end,@start);
-  foreach (sort { $starts->{$b} <=> $starts->{$a} } keys %$starts)
-    {
-    push @start, $_;
-    }
-  $args->{start} = \@start;
-  foreach (sort { $ends->{$b} <=> $ends->{$a} } keys %$ends)
-    {
-    push @end, $_;
-    }
-  $args->{end} = \@end;
-  if ($depth > 1)
-    {
-    my @sorted;
-    foreach my $c (keys %$bi)
-      {
-      my $bc = $bi->{$c};
-      $args->{bi}->{$c} = [
-        sort { $bc->{$b} <=> $bc->{$a} or $a cmp $b } keys %$bc
-        ];
-      }
-    }
-  else
-    {
-    my @chars = ();
-    foreach (sort { $chars->{$b} <=> $chars->{$a} } keys %$chars)
-      {
-      push @chars, $_;
-      }
-    $args->{chars} = \@chars;
-    }
-  if ($hist != 0)
-    {
-    # return histogram
-    if ($depth > 1)
-      {
-      $args->{hist} = $bi;
-      }
-    else
-      {
-      $args->{hist} = $chars;
-      }
-    }
-  return $args;
   }
 
 #############################################################################
 
 =head1 NAME
 
-Math::String::Charset - A simple charset for Math::String objects.
+Math::String::Charset::Nested - A charset for Math::String objects.
 
 =head1 SYNOPSIS
 
     use Math::String::Charset;
-
-    $a = new Math::String::Charset;		# default a-z
-    $b = new Math::String::Charset ['a'..'z'];	# same
-    $c = new Math::String::Charset 
-	{ start => ['a'..'z'], sep => ' ' };	# with ' ' between chars
-
-    print $b->length();				# a-z => 26
 
     # construct a charset from bigram table, and an initial set (containing
     # valid start-characters)
@@ -931,46 +666,18 @@ Math::String::Charset - A simple charset for Math::String objects.
     print scalar $bi->class(2);		# count of combinations with 2 letters
 					# will be 3+2+2+1 => 8
 
-    $d = new Math::String::Charset ( { start => ['a'..'z'],
-      minlen => 2, maxlen => 4, } );	
-
-    print $d->first(0),"\n";		# undef, too short
-    print $d->first(1),"\n";		# undef, to short
-    print $d->first(2),"\n";		# 'aa'
-
-    $d = new Math::String::Charset ( { start => ['a'..'z'] } );
-
-    print $d->first(0),"\n";		# ''
-    print $d->first(1),"\n";		# 'a'
-    print $d->last(1),"\n";		# 'z'
-    print $d->first(2),"\n";		# 'aa'
-
 =head1 REQUIRES
 
-perl5.005, Exporter, Math::BigInt
+perl5.005, Exporter, Math::BigInt, Math::String::Charset
 
 =head1 EXPORTS
 
-Exports nothing on default, can export C<analyze> and C<SIMPLE>.
+Exports nothing.
 
 =head1 DESCRIPTION
 
 This module lets you create an charset object, which is used to contruct
-Math::String objects. This object knows how to handle simple charsets as well
-as complex onex consisting of bi-grams (later tri and more).
-
-In case of more complex charsets, a reference to a
-L<Math::String::Charset::Nested> or L<Math::String::Charset::grouped> will be
-returned.
-
-=over 1
-
-=item Default charset
-
-The default charset is the set containing "abcdefghijklmnopqrstuvwxyz"
-(thus producing always lower case output).
-
-=back
+Math::String objects. This object knows how to handle charsets with bi-grams.
 
 =head1 ERORRS
 
@@ -978,11 +685,11 @@ Upon error, the field C<_error> stores the error message, then die() is called
 with this message. If you do not want the program to die (f.i. to catch the
 errors), then use the following:
 
-	use Math::String::Charset;
+	use Math::String::Charset::Nested;
 
-	$Math::String::Charset::die_on_error = 0;
+	$Math::String::Charset::Nested::die_on_error = 0;
 
-	$a = new Math::String::Charset ();	# error, empty set!
+	$a = new Math::String::Charset::Nested ();	# error, empty set!
 	print $a->error(),"\n";
 
 =head1 INTERNAL DETAILS
@@ -996,16 +703,7 @@ sequentiell Math::String conversations from string to number, and vice versa.
 All characters used to construct the charset must have the same length, but
 need not neccessarily be one byte/char long.
 
-=head2 COMPLEXITY
-
-The complexity for converting from number to string, and vice versa,
-is O(N), with N beeing the number of characters in the string.
-
-Actually, it is a bit higher, since the underlying Math::BigInt needs more
-time for longer numbers than for shorts. But usually the practically string
-length limit is reached before this effect shows up.
-
-See BENCHMARKS in Math::String for run-time details.
+If a seperator string is used, the character length is not used.
 
 =head2 STRING ORDERING
 
@@ -1015,119 +713,11 @@ simple and straightforward, albeit slow.
 With bigrams, this becomes even more complex. But since all the information
 on how to convert between number and string in inside the charset definition,
 Math::String::Charset will produce (and sometimes cache) this information.
-Thus Math::String is simple a hull around Math::String::Charset and
-Math::BigInt.
+Thus Math::String is simple a hull around Math::String::Charset and it's subclasses and Math::BigInt.
 
 =head2 SIMPLE CHARSETS
 
-Depending on the charset, the order in which Math::String 'sees' the strings
-is different. Example with charset 'A'..'D':
-
-          A      1
-          B      2
-          C      3
-          D      4
-         AA      5
-         AB      6
-         AC      7
-         AD      8
-         BA      9
-         BB     10
-         BC     11
-         ..
-        AAA     20
-        AAB     21 etc
-
-The order of characters does not matter, 'B','D','C','A' will produce similiar
-results, though in a different order inside Math::String:
-
-          B      1
-          D      2
-          C      3
-          A      4
-         BB      5
-         BD      6
-         BC      7
-         ..
-        BBB     20
-        BBD     21 etc
-
-Here is an example with characters of length 3:
-
-	foo	 1
-	bar	 2
-	baz	 3
-     foofoo	 4
-     foobar	 5
-     foobaz	 6
-     barfoo      7
-     barbar      8
-     barbaz      9
-     bazfoo	10
-     bazbar	11
-     bazbaz	12
-  foofoofoo	13 etc
-
-All charset items must have the same length, unless you use a separator string:
-        
-	use Math::String;
-
-        $a = Math::String->new('', 
-          { start => [ qw/ the green car a/ ], sep => ' ' } );
-
-        while ($b ne 'the green car')
-          {
-	  $a ++;
-          print "$a\t";         # print "a green car" etc
-          }
-
-The separator is a string, not a regexp and it must not be present in any
-of the characters of the charset.
-
-The old way was using a fill character, which is more complicated:
-
-        use Math::String;
-
-        $a = Math::String->new('', [ qw/ the::: green: car::: a:::::/ ]);
-
-        while ($b ne 'the green car')
-          {
-          $a ++;
-          print "$a\t";         # print "a:::::green:car:::" etc
-
-          $b = "$a"; $b =~ s/:+/ /g; $b =~ s/\s+$//;
-          print "$b\n";         # print "a green car" etc
-          }
-
-This produces:
-
-	the:::  the
-	green:  green
-	car:::  car
-	a:::::  a
-	the:::the:::    the the
-	the:::green:    the green
-	the:::car:::    the car
-	the:::a:::::    the a
-	green:the:::    green the
-	green:green:    green green
-	green:car:::    green car
-	green:a:::::    green a
-	car:::the:::    car the
-	car:::green:    car green
-	car:::car:::    car car
-	car:::a:::::    car a
-	a:::::the:::    a the
-	a:::::green:    a green
-	a:::::car:::    a car
-	a:::::a:::::    a a
-	the:::the:::the:::      the the the
-	the:::the:::green:      the the green
-	the:::the:::car:::      the the car
-	the:::the:::a:::::      the the a
-	the:::green:the:::      the green the
-	the:::green:green:      the green green
-	the:::green:car:::      the green car
+For a discussion of these see L<Math::String::Charset>.
 
 =head2 HIGHER ORDERS
 
@@ -1329,38 +919,7 @@ of the charset.
 
 =head2 SIMPLE CHARSET
 
-To convert between string and number, we must simple know which string has
-which number and which number is which string. Although this sounds very
-difficult, it is not so. With 'simple' charsets, it only involves a bit of
-math. 
-
-First we need to know how many string are in the class. From
-this information we can determine the lenght of a string given it's number,
-and get the range inside which the number to a string lies:
-
-Let's stick to the example with 4 characters above, 'A'..'D':
-
-        Stringlenght    strings with that length        first in range
-        1               4                               1
-        2               16 (4*4)                        5
-        3               64 (4*4*4)                      21
-        4               4**4                            85
-        5               4**5 etc                        341
-
-You see that this is easy to calculate. Now, given the number 66,
-we can determine how long the string must be:
-
-66 is greater than 21, but lower than 85, so the string must be 3 characters
-long. This information is determined in O(N) steps, wheras N is the length
-of the string by successive comparing the number to the elements in all
-string of a certain length.
-
-If we then subtract from 66 the 21, we get 45 and thus know it must be the
-fourty-fifth string of the 3 character long ones.
-
-The math involved to determine which 3 character-string it actually is
-equally to converting between decimal and hexadecimal numbers. Please see
-source for the gory, but boring details.
+See L<Math::String::Charset>.
 
 =head2 HIGHER ORDER CHARSETS
 
@@ -1649,9 +1208,7 @@ one, look at the next character and repeat this.  In pseudo code:
 So, after N simple steps (where N is the number of characters in the string),
 we have found the number of the string.
 
-=head2 HIGHER ORDER CHARSETS, FINDING THE RIGHT STRING
-
-Section not ready yet.
+Section not fully done yet.
 
 =head2 MULTIPLE MULTIWAY TREES
 
@@ -1704,47 +1261,26 @@ higher order charsets, this is no longer true.
 
             new();
 
-Create a new Math::String::Charset object. 
+Create a new Math::String::Charset::Grouped object. 
 
-The constructor takes either an ARRAY or a HASH reference. In case of the
-array, all elements in that array will be used as characters in the charset,
-and the charset will be of order 0, type 0.
+The constructor takes a HASH reference.  The charset will be of order 2 or
+greater and type 0.
 
-If given a HASH reference, the following keys can be used for all charsets:
+The following keys can be used:
 
 	minlen		Minimum string length, -inf if not defined
 	maxlen		Maximum string length, +inf if not defined
-
-The following keys can only be used in certain combinations, which will be
-explained below:
-
 	bi		hash,  table with bi-grams
-	sets		hash, table with charsets for the different places
 	start		array ref to list of all valid (starting) characters
 	end		array ref to list of all valid ending characters
 	sep		separator character, none if undef (only for order 1)
 
-If you use neither B<bi> nor B<sets>, the charset will be of order 1, type 0.
-If you use a hash key named B<bi>, the charset will be of order 2, type 0.
-If you use a hash key named B<sets>, the charset will be of order 1, type 1.
-
-For a charset of type 0, order 1 (simpel set) the following keys are valid:
-
-	start		required
-	end		optional (to restrict number of 1-character strings)
-	sep		optional
-	
-For a charset of type 0, order 2 (bi-gram set) the following keys are valid:
-
-	start		optional
-	end		optional
-	bi		required
-
-For a charset of type 1, order 1 (grouped set) the following keys are valid:
-	
-	sets		required
-
 =over 2
+
+=item sep
+
+C<sep> is a seperator string seperating the characters from each other. This
+is used to make characters with different lengths possible.
 
 =item start
 
@@ -1755,27 +1291,6 @@ characters, e.g. no valid string can start with a character not listed here.
 
 C<bi> contains a hash reference, each key of the hash points to an array,
 which in turn contains all the valid combinations of two letters.
-
-=item sets
-
-C<sets> contains a hash reference, each key of the hash indicates an index.
-Each of the hash entries points either to an ARRAY reference or a
-Math::String::Charset of order 1, type 0.
-
-Positive indices count from the left side, negative from the right. 0 denotes
-the default.
-
-At each of the position indexed by a key, the appropriate charset will be used.
-
-Example for specifying that strings must start with upper case letters,
-followed by lower case letters and can end in either a lower case letter or a
-number:
-
-	sets => {
-	  0 => ['a'..'z'],		# the default
-	  1 => ['A'..'Z'],		# first character is always A..Z
-	 -1 => ['a'..'z','0'..'9'],	# last is q..z,0..9
-	}
 
 =item end
 
@@ -1790,7 +1305,8 @@ silently to the C<end> set.
 =item minlen
 
 Optional minimum string length. Any string shorter than this will be invalid.
-Must be shorter than a (possible defined) maxlen. If not given is set to -inf.
+Must be shorter than maxlen. If not given is set to -inf.
+
 Note that the minlen might be adjusted to a greater number, if it is set to 1
 or greater, but there are not valid strings with 2,3 etc. In this case the
 minlen will be set to the first non-empty class of the charset.
@@ -1798,7 +1314,7 @@ minlen will be set to the first non-empty class of the charset.
 =item maxlen
 
 Optional maximum string length. Any string longer than this will be invalid.
-Must be longer than a (possible defined) minlen. If not given is set to +inf.
+Must be longer than minlen. If not given is set to +inf.
 
 =back
 
@@ -1841,18 +1357,6 @@ Return the number of items in a class.
 
 	print $charset->class(5);	# how many strings with length 5?
 
-=head2 B<map()>
-
-	$charset->map($char);
-
-Map a character to it's number, counting from 0 .. N-1 where N is the length
-of the charset:
-
-	$charset = Math::String::Charset->new(['A'..'Z']);
-
-	print $charset->map('A'),"\n";		# prints 0
-	print $charset->map('Z'),"\n";		# prints 25
-
 =head2 B<char()>
 
 	$charset->char($nr);
@@ -1888,16 +1392,15 @@ to (but much faster):
 
 	$order = $charset->order();
 
-Return the order of the charset: 1 for simple charsets, 2 (bi-grams), 3 etc
-for higher orders. See also L<type()>.
+Return the order of the charset: 2 (bi-grams), 3 etc for higher orders.
+See also L<type()>.
 
 =head2 B<type()>
 
 	$type = $charset->type();
 
-Return the type of the charset: 0 for simple charsets, 1 for grouped ones.
-If the type is 0, the order can be 1,23 etc, with type 1 the order is always
-1, too. See also L<order>.
+Return the type of the charset and is always 0 for nested charsets.
+See also L<order>.
 
 =head2 B<charlen()>
 
@@ -1935,15 +1438,7 @@ See C<highest()> for the corrospending number.
 
 	$charset->is_valid();
 
-Check wether a string conforms to the charset set or not. Returns 1 for okay, 0
-for invalid strings.
-  
-=head2 B<norm()>
-
-	$charset->norm();
-
-Normalize a string by removing separator char at front/end. Does nothing if
-no separator is defined.
+Check wether a string conforms to the charset set or not.
 
 =head2 B<error()>
 
@@ -2056,81 +1551,6 @@ This is faster than incrementing the number of the string and converting the
 new number to a string. This routine is mainly used internally by Math::String
 and updates the cache of the given Math::String.
 
-=head2 B<study()>
-
-	$hash = Math::String::Charset::study( {
-          order => $order, words => \@words, sep => 'separator',
-          charlen => 1, hist => 1 } );
-
-Studies the given list of strings/words and builds a hash that you can use
-to construct a charset of. The C<order> is 1 for simple charsets, 2 for bigrams
-and so on. The key C<depth> is a synonym for C<order>.
-
-C<separator> (can be undef) is the sting that separates characters.
-C<charlen> is the length of a character, and defaults to 1. Use this if you
-have characters longer than one and no separator string.
-
-If you set the parameter C<hist> to a value different from zero, the returned
-hash will contain a key C<hist>, too. This will be a reference to a hash
-containing the histogram of letters or n-grams, depending on the depth of the
-analysis. 
-
-Some example:
-	
-	use Math::String::Charset;
-	use Data::Dumper;
-
-	$hash = Math::String::Charset::study( {
-          depth => 1, words => [ 'hocuspocus'], hist => 1 } );
-	print Dumper ($hash),"\n";
-
-This will produce (slightly contracted here):
-
-	$VAR1 = {
-          'end'   => [ 's' ],
-          'hist'  => { 'u' => '2', 'o' => '2', 'p' => '1', 'h' => '1',
-                      's' => '2', 'c' => '2' },
-          'chars' => [ 'u', 'o', 's', 'c', 'p', 'h' ],
-          'start' => [ 'h' ]
-        }; 	
-
-Using C<depth => 2>, you would get (slightly ontracted again):
-
-	$VAR1 = {
-          'end'  => [ 's' ],
-          'hist' => { 'u' => { 's' => '2' },
-                      'o' => { 'c' => '2' },
-                      'p' => { 'o' => '1' },
-                      'h' => { 'o' => '1' },
-                      's' => { 'p' => '1' },
-                      'c' => { 'u' => '2' }
-                    },
-          'bi'   => {
-                    'u' => [ 's' ],
-                    'o' => [ 'c' ],
-                    'h' => [ 'o' ],
-                    'p' => [ 'o' ],
-                    'c' => [ 'u' ],
-                    's' => [ 'p' ]
-                  },
-          'start' => [ 'h' ]
-        };
-
-Instead passing an ARRAY ref as words, you can as well pass a HASH ref. The
-keys in the hash will be used as words then. This is so that you can clean out
-doubles by using a hash and pass it to study without converting it back to an
-array first.
-
-=head2 B<analyze()>
-
-Is an exportable alias for L<study()>.
-	
-	use Math::String::Charset qw/analyze/;
-
-	$hash = Math::String::Charset::analyze( 
-	  words => ['Perl','Hacker','Just','Another'], depth => 2,  
-	);
-
 =head1 EXAMPLES
 
     use Math::String::Charset;
@@ -2152,13 +1572,10 @@ Is an exportable alias for L<study()>.
         }
       } );
     print $bi->length(),"\n";			# 4
-    print scalar $bi->combinations(2),"\n";	# count of combos with 2 chars
+    print scalar $bi->class(2),"\n";		# count of combos with 2 chars
 						# will be 1+2+2+2+2 => 9
-    my @comb = $bi->combinations(3);
-    foreach (@comb)
-      {
-      print "$_\n";
-      }
+    my @comb = $bi->class(3);
+    print join ("\n", @comb);
 
 This will print:
 
@@ -2223,11 +1640,7 @@ deeply nested.
 
 =item *
 
-C<study()> does not yet work with separator chars and chars longer than 1.
-
-=item *
-
-str2num and num2str do not work fully for bigrams yet.
+str2num and num2str do not work fully yet.
 
 =back
 

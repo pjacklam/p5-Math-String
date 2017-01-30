@@ -21,6 +21,13 @@ Math::String:
 		 fixed bug in copy() code in from_number() 
 2001-07-26 1.13: new( { str => 'abc', num => '123' } );
 2001-08-08 1.14: bstr() was not caching string form, some more tests
+	         copy() does no longer make a (costly) true copy of the charset
+2001-09-01 1.15: unreleased
+		 binc(), bdec() modify cache for speedup (instead clearing it)
+                 added bone(), is_valid(), maxlen(), minlen()
+2001-11-05 1.16: added class() 
+		 binc(), bdec() modify cache instead of clearing it (speedup)
+		 added bone(), is_valid(), minlen(), maxlen(), type(), class() 
 
 ############################################################################## 
 Math::String::Charset:
@@ -41,6 +48,40 @@ Math::String::Charset:
 		 	documented that length() always returns count of chars
 2000-03-25 1.08: added: next(), prev() for simple charsets (cache in M::S)
 2000-06-26 1.09: fixed: bug accessing BigInt's internals, fails for BitVect etc
+2000-09-01 1.10: split: into Charset, Nested and Grouped
+                 fixed: next()/prev() work now
+		 added: support for minlen, maxlen, ones(), type()
+2000-10-19 1.11: fixed: Math::BigInt::bzero() => Math::BigInt->bero()
+		 split Charset.pm into
+			Math::String::Charset::Simple  (type = 0, order = 1)
+			Math::String::Charset::Nested  (type = 0, order > 1)
+			Math::String::Charset::Grouped (type = 1, order = 1)
+	         added: support for minlen and maxlen
+	                ones(), count(), zero(), one(), type() and tests
+			next/prev actually work
+			analyze is alias for study, can export analyze
+		fixed:  better error handling upon initialization
+  			is now subclassable
+			first()/last() work now with sep char, added tests
+  			make Math::String->first($length,$set) work
+			 (and last(), too), test for it
+			study:
+			 'chars' and 'start' for depth => 1
+			 depth as alias for order
+			 can return histogram (hist => 1)
+			 now works for the "hocuspocus" example
+			 tests are now in seperate file 
+
+############################################################################## 
+Math::String::Charset::Grouped:
+2000-09-20 0.01: first version from Charset
+2000-10-25 0.02: fixed bugs, added sep char support
+
+############################################################################## 
+Math::String::Charset::Nested:
+2000-09-15 0.01: split from Charset
+		 fixed: bi-gram chars w/o followers can't be in _start
+		 class() was wrong for bi-grams (with some start sets)
 
 ############################################################################## 
 Math::String::Sequence:
