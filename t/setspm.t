@@ -150,7 +150,7 @@ ok_undef ($a->map('d'));
 $a = $c->new( ['a','b','foo','c'] );
 if ($a->error() !~ /Illegal.*char.*length.*not/)
   {
-  ok ($a->error(),"not '" . $a->error() . "'"); 
+  ok ($a->error(),"not '" . $a->error() . "'");
   }
 else
   {
@@ -237,7 +237,7 @@ ok ($a->str2num(' hans mag blumen'),3+3*3+6);
 ok ($a->str2num('hans mag blumen '),3+3*3+6);
 ok ($a->str2num(' hans mag blumen '),3+3*3+6);
 
-$a = $c->new( { start => ['foooo','bar','buuh'], 
+$a = $c->new( { start => ['foooo','bar','buuh'],
   sep => ' ',} );
 ok ($a->error(),"");
 
@@ -294,5 +294,3 @@ sub ok_undef
   ok (1,1) and return if !defined $x;
   ok ($x,'undef');
   }
-
-

@@ -55,8 +55,8 @@ for my $c (qw/ Math::String::Charset Math::String::Charset::Nested/)
 # bi grams
 
 # check ones (cross from start/end) and restricting of start
-$a = Math::String::Charset->new( { 
-    start => ['b','c','a', 'q' ], 
+$a = Math::String::Charset->new( {
+    start => ['b','c','a', 'q' ],
     bi => {
       'a' => [ 'b', 'c', 'a' ],
       'b' => [ 'c', 'b' ],
@@ -83,8 +83,8 @@ ok ($a->is_valid('bcabq'),0);		# illegal bigram 'bq'
 ok ($a->is_valid('qa'),0);		# illegal bigram 'qa'
 
 ok ($a->error(),"");
-$a = Math::String::Charset->new( { 
-    start => ['b','c','a'], 
+$a = Math::String::Charset->new( {
+    start => ['b','c','a'],
     bi => {
       'a' => [ 'b', 'c', 'a' ],
       'b' => [ 'c', 'b' ],
@@ -114,8 +114,8 @@ ok ($a->class(2),7); 		# bc
 				# ac
 				# aa
 ok ($a->class(3),3*2+2*2+2*3); 	# 7 combos:
-		 		# 3 of them end in c => 3 * 2 
-                       		# 2 of them end in b => 2 * 2 
+		 		# 3 of them end in c => 3 * 2
+                       		# 2 of them end in b => 2 * 2
                        		# 2 of them end in a => 2 * 3
 				# sum:			16
 				# result:
@@ -190,8 +190,8 @@ ok ($a->{_scnt}->[4]->{c},12);
 ###############################################################################
 # restricting ending chars
 
-$a = Math::String::Charset->new( { 
-    start => ['b','c','a'], 
+$a = Math::String::Charset->new( {
+    start => ['b','c','a'],
     bi => {
       'a' => [ 'b', 'c', 'a' ],
       'b' => [ 'c', 'b' ],
@@ -203,8 +203,8 @@ ok ($a->error(),"");
 ok ($a->length(),3);		# a,b,c
 ok (scalar $a->end(),4);	# a,b,c,q
 
-$a = Math::String::Charset->new( { 
-    start => ['b','c','a'], 
+$a = Math::String::Charset->new( {
+    start => ['b','c','a'],
     bi => {
       'a' => [ 'b', 'c', 'a' ],
       'b' => [ 'c', 'b' ],
@@ -230,8 +230,8 @@ ok ($a->{_scnt}->[2]->{b},1);	# bb 		(bc is invalid)
 ok ($a->{_scnt}->[2]->{c},2);	# ca, cx	(cc is invalid)
 
 # check last(), first()
-$a = Math::String::Charset->new( { 
-    start => ['b','c','a','i'], 
+$a = Math::String::Charset->new( {
+    start => ['b','c','a','i'],
     bi => {
       'a' => [ 'c', 'b' ],
       'b' => [ 'c', 'b','j' ],
@@ -262,8 +262,8 @@ ok ($a->last(4), 'abbj');
 ok ($a->first(5),'bcaca');
 ok ($a->last(5), 'abbbj');
 
-$a = Math::String::Charset->new( { 
-    start => ['b','c','a','i'], 
+$a = Math::String::Charset->new( {
+    start => ['b','c','a','i'],
     bi => {
       'a' => [ 'q', 'j', 'b' ],
       'b' => [ 'c', 'b','j' ],
@@ -300,7 +300,7 @@ ok ($a->norm('hocus'),'hocus');
 ###############################################################################
 # scale
 
-$a = $c->new( { 
+$a = $c->new( {
   start => ['b','c','a','i'],
   bi => {
       'a' => [ 'q', 'j', 'b' ],
@@ -322,7 +322,7 @@ ok (ref($b), $c);
 ok ($b->error(),"");
 ok ($b->isa('Math::String::Charset'));
 ok ($b->isa($c));
-                                       
+
 ###############################################################################
 # Perl 5.005 does not like ok ($x,undef)
 
@@ -334,5 +334,3 @@ sub ok_undef
   ok (1,1) and return if !defined $x;
   ok ($x,'undef');
   }
-
-

@@ -26,11 +26,11 @@ my $a;
 
 my $c = 'Math::String::Charset::Grouped';
 
-$a = Math::String::Charset->new( { sets => 
-  { 
+$a = Math::String::Charset->new( { sets =>
+  {
    0 => ['a'..'f'],
-   1 => ['A'..'Z'], 
-  -1 => ['0'..'9'], 
+   1 => ['A'..'Z'],
+  -1 => ['0'..'9'],
   } } );
 
 ok ($a->error(),"");
@@ -46,11 +46,11 @@ ok ($a->class(3),26*6*10);		# A-Z * a-f * 0-9
 ok ($a->class(4),26*6*6*10);		# A-Z * a-f * a-f * 0-9
 ok ($a->class(5),26*6*6*6*10);		# A-Z * a-f * a-f * a-f * 0-9
 
-$a = Math::String::Charset->new( { sets => 
-  { 
+$a = Math::String::Charset->new( { sets =>
+  {
    0 => ['a'..'f'],
-   1 => ['A'..'Z','0'..'4'], 
-  -1 => ['0'..'9'], 
+   1 => ['A'..'Z','0'..'4'],
+  -1 => ['0'..'9'],
   } } );
 
 # '', '0', '1', '2', '3', '4', 'A0', 'A1', ...
@@ -63,7 +63,7 @@ ok ($a->class(4),31*6*6*10);		# A-Z,0..4 * a-f * a-f * 0-9
 ok ($a->class(5),31*6*6*6*10);		# A-Z,0..4 * a-f * a-f * a-f * 0-9
 
 # str2num and reverse
-ok ($a->str2num(''),0);	
+ok ($a->str2num(''),0);
 ok ($a->str2num('0'),1);
 ok ($a->str2num('1'),2);
 ok ($a->str2num('2'),3);
@@ -118,7 +118,7 @@ ok ($a->last(3),'4f9');
 # test whether new() destroys {sets} key
 
 my $sets = { 0 => ['a'..'z'], };
- 
+
 $a = Math::String::Charset->new( { sets => $sets, start => [ 'a' .. 'z' ], } );
 ok ($a->error(),"");
 ok ($a->isa('Math::String::Charset'));
@@ -128,12 +128,12 @@ ok (scalar keys %$sets,1);
 ###############################################################################
 # chars
 
-$a = Math::String::Charset->new( { sets => 
-  { 
+$a = Math::String::Charset->new( { sets =>
+  {
    0 => ['a'..'z'],
-   1 => ['0'..'9','a'..'z','A'..'Z'], 
-  -1 => ['!',' ','0'..'9','a'..'z'], 
-  -2 => ['!',' ','0'..'9','a'..'z'], 
+   1 => ['0'..'9','a'..'z','A'..'Z'],
+  -1 => ['!',' ','0'..'9','a'..'z'],
+  -2 => ['!',' ','0'..'9','a'..'z'],
   } } );
 
 foreach (qw/ abcdef hans Hans hans1 hans99 Hans99 hans!/,'hans ')
@@ -149,8 +149,8 @@ ok ($a->norm('abz'),'abz');
 ###############################################################################
 # grouped with sep char charsets
 
-$a = Math::String::Charset->new( { sep => ' ', sets => 
-  { 
+$a = Math::String::Charset->new( { sep => ' ', sets =>
+  {
    0 => Math::String::Charset->new( { sep => ' ', start => [ 'a','aa' ] } ),
    1 => Math::String::Charset->new( { sep => ' ', start => [ 'Z','ZZ' ] } ),
   } } );
@@ -170,8 +170,8 @@ ok ($a->str2num('ZZ aa'),4);
 ###############################################################################
 # bug in is_valid() not calling _calc() early enough
 
-$a = Math::String::Charset->new( { sep => ' ', sets => 
-  { 
+$a = Math::String::Charset->new( { sep => ' ', sets =>
+  {
    0 => Math::String::Charset->new( { sep => ' ', start => [ 'a','aa' ] } ),
    1 => Math::String::Charset->new( { sep => ' ', start => [ 'Z','ZZ' ] } ),
    -1 => Math::String::Charset->new( { sep => ' ', start => [ '0','99' ] } ),
@@ -237,5 +237,3 @@ sub ok_undef
   ok (1,1) and return if !defined $x;
   ok ($x,'undef');
   }
-
-

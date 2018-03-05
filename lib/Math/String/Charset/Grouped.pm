@@ -8,7 +8,7 @@ package Math::String::Charset::Grouped;
 use base Math::String::Charset;
 
 use vars qw($VERSION);
-$VERSION = '0.06';	# Current version of this package
+$VERSION = '1.29';	# Current version of this package
 require  5.005;		# requires this Perl version or later
 
 use strict;
@@ -47,7 +47,7 @@ $die_on_error = 1;              # set to 0 to not die
 # _spat	: array with pattern of charsets 8for each stirnglen one ARRAY ref)
 
 #############################################################################
-# private, initialize self 
+# private, initialize self
 
 sub _strict_check
   {
@@ -78,12 +78,12 @@ sub _initialize
 
   return $self->{_error} = "Need HASH ref as 'sets'"
     if (ref($value->{sets}) ne 'HASH');
- 
+
   # make copy at same time
   foreach my $key (keys %{$value->{sets}})
     {
     $self->{_sets}->{$key} = $value->{sets}->{$key};
-    }		
+    }
 
   # start/end are sets 1 and -1, respectively, and overwrite 'sets'
   $self->{_sets}->{1} = $value->{start} if exists $value->{start};
@@ -91,7 +91,7 @@ sub _initialize
   $self->{_sets}->{0} = $value->{chars} if exists $value->{chars};
   # default set
   $self->{_sets}->{0} = ['a'..'z'] if !defined $self->{_sets}->{0};
- 
+
   my $sets = $self->{_sets};	# shortcut
   foreach my $set (keys %$sets)
     {
@@ -99,20 +99,20 @@ sub _initialize
       "Entries in 'sets' must be ref to Math::String::Charset or ARRAY"
      if ((ref($sets->{$set}) ne 'ARRAY') &&
       (ref($sets->{$set}) ne 'Math::String::Charset'));
-    
+
     # so for each set, make a Math::String::Charset
-    $sets->{$set} = Math::String::Charset->new($sets->{$set}) 
+    $sets->{$set} = Math::String::Charset->new($sets->{$set})
       if ref($sets->{$set}) eq 'ARRAY';
     }
   $self->{_start} = $sets->{1} || $sets->{0};
   $self->{_end} = $sets->{-1} || $sets->{0};
-  
+
   $self->{_clen} = $self->{_start}->charlen() if
    ((!defined $self->{_clen}) && (!defined $self->{_sep}));
 
   # build _ones list (cross from start/end)
   $self->{_ones} = [];
-  
+
   # _end is a simple charset, so use it's map directly
   my $end = $self->{_end}->{_map};
   my $o = $self->{_ones};
@@ -128,7 +128,7 @@ sub _initialize
     foreach (keys %{$self->{_sets}})
       {
       my $l = $self->{_sets}->{$_}->charlen();
-      return $self->{_error} = 
+      return $self->{_error} =
         "Illegal character length '$l' for charset '$_', expected '$self->{_clen}'"
           if $self->{_sets}->{$_}->charlen() != $self->{_clen};
 
@@ -149,7 +149,7 @@ sub _initialize
     $self->{_sum}->[1] = Math::BigInt->bone();		# '' is 1 string
     $self->{_sum}->[2] = $self->{_count}->[1] + $self->{_sum}->[1];
     $self->{_sum}->[3] = $self->{_count}->[2] + $self->{_sum}->[2];
-    # init set patterns	
+    # init set patterns
     $self->{_spat}->[1] = [ undef, $self->{_sets}->{0} ];
     $self->{_spat}->[2] = [ undef, $self->{_start}, $self->{_end} ];
     }
@@ -164,7 +164,7 @@ sub _initialize
     {
     $self->{_map}->{$_} = $i++;
     }
-    
+
   if ($self->{_cnum}->is_zero())
     {
     $self->{_minlen} = 2 if $self->{_minlen} == 1;	# no one's
@@ -175,7 +175,7 @@ sub _initialize
       # check whether some path from start to end set exists, if not: empty
       }
     }
-  return $self->{_error} = 
+  return $self->{_error} =
    "Minlen ($self->{_minlen} must be smaller than maxlen ($self->{_maxlen})"
     if ($self->{_minlen} > $self->{_maxlen});
   return $self;
@@ -184,10 +184,10 @@ sub _initialize
 sub dump
   {
   my $self = shift;
-  
+
   my $txt = "type: GROUPED\n";
 
-  foreach my $set (keys %{$self->{_sets}})
+  foreach my $set (sort { $b<=>$a } keys %{$self->{_sets}})
     {
     $txt .= " $set => ". $self->{_sets}->{$set}->dump('   ');
     }
@@ -218,15 +218,15 @@ sub _calc
     for (my $j = 1; $j <= $i; $j++)
       {
       my $r = $j-$i-1;			# reverse
-#      print "$j reversed $r (for $i)\n";	
+#      print "$j reversed $r (for $i)\n";
       $spat->[$j] = $sets->{$j} || $sets->{$r};			# one of both?
       $spat->[$j] = $sets->{$j}->merge($sets->{$r}) if
 	exists $sets->{$j} && exists $sets->{$r};		# both?
       $spat->[$j] = $sets->{0} unless defined $spat->[$j];	# none?
 #      print $spat->[$j]->dump(),"\n";
-      } 
+      }
     $self->{_spat}->[$i] = $spat;				# store
-    # for each charset, take size and mul together	
+    # for each charset, take size and mul together
     $last = Math::BigInt->bone();
     for (my $j = 1; $j <= $i; $j++)
       {
@@ -240,7 +240,7 @@ sub _calc
 #    print "sum $self->{_sum}->[$i]\n";
     }
   $self->{_cnt} = $i-1;         # store new cache size
-  return; 
+  return;
   }
 
 sub is_valid
@@ -313,7 +313,7 @@ sub start
 
   wantarray ? @{$self->{_start}} : scalar @{$self->{_start}};
   }
-      
+
 sub end
   {
   # this returns all the end characters in a list, or in case of a simple
@@ -336,16 +336,16 @@ sub ones
 sub num2str
   {
   # convert Math::BigInt/Math::String to string
-  # in list context, return (string,stringlen) 
+  # in list context, return (string,stringlen)
   my $self = shift;
   my $x = shift;
 
-  $x = new Math::BigInt($x) unless ref $x; 
+  $x = new Math::BigInt($x) unless ref $x;
   return undef if ($x->sign() !~ /^[+-]$/);
   if ($x->is_zero())
     {
     return wantarray ? ('',0) : '';
-    }  
+    }
   my $j = $self->{_cnum};			# nr of chars
 
   if ($x <= $j)
@@ -356,13 +356,13 @@ sub num2str
 
   my $digits = $self->chars($x); my $d = $digits;
   # now treat the string as it were a zero-padded string of length $digits
- 
+
   my $es="";                                    # result
   # copy input, make positive number, correct to $digits and cater for 0
   my $y = Math::BigInt->new($x); $y->babs();
   #print "fac $j y: $y new: ";
   $y -= $self->{_sum}->[$digits];
- 
+
   $self->_calc($d) if ($self->{_cnt} < $d);
   #print "y: $y\n";
   my $mod = 0; my $s = $self->{_sep}; $s = '' if !defined $s;
@@ -401,7 +401,7 @@ sub str2num
   my $clen = $self->{_clen};		# len of one char
 
   if ((!defined $self->{_sep}) && ($i == $clen))
-    { 
+    {
     return $int->bnan() if !exists $map->{$str};
     return $map->{$str}->copy();
     }
@@ -409,7 +409,7 @@ sub str2num
   my $mul = Math::BigInt->bone();
   my $cs;					# charset at pos i
   my $k = 1;					# position
-  my $c = 0;					# chars in string	
+  my $c = 0;					# chars in string
   if (!defined $self->{_sep})
     {
     return $int->bnan() if $i % $clen != 0;	# not multiple times clen
@@ -457,7 +457,7 @@ sub str2num
 #  # return nth char from charset
 #  my $self = shift;
 #  my $char = shift || 0;
-# 
+#
 #  return undef if $char > scalar @{$self->{_ones}}; # dont create spurios elems
 #  return $self->{_ones}->[$char];
 #  }
@@ -496,7 +496,7 @@ sub last
   return '' if $count == 0;
 
   return $self->{_ones}->[-1] if $count == 1;
- 
+
   $self->_calc($count);
   my $spat = $self->{_spat}->[$count];
   my $es = '';
@@ -552,6 +552,8 @@ __END__
 
 #############################################################################
 
+=pod
+
 =head1 NAME
 
 Math::String::Charset::Grouped - A charset of simple charsets for Math::String objects.
@@ -571,7 +573,7 @@ Exports nothing.
 =head1 DESCRIPTION
 
 This module lets you create an charset object, which is used to construct
-Math::String objects. 
+Math::String objects.
 
 This object can assign for each position in a Math::String a different simple
 charset (aka a Math::String::Charset object of order => 1, type => 0).
@@ -606,11 +608,13 @@ sequentiell Math::String conversations from string to number, and vice versa.
 
 =head1 METHODS
 
-=head2 B<new()>
+=over
+
+=item new()
 
             new();
 
-Create a new Math::Charset::Grouped object. 
+Create a new Math::Charset::Grouped object.
 
 The constructor takes a HASH reference. The following keys can be used:
 
@@ -621,7 +625,7 @@ The constructor takes a HASH reference. The following keys can be used:
 	end		array ref to list of all valid ending characters
 	sep		separator character, none if undef
 
-C<start> and C<end> are synomyms for C<sets->{1}> and C<sets->{-1}>,
+C<start> and C<end> are synomyms for C<< sets->{1} >> and C<< sets->{-1} >>,
 respectively. The will override what you specify in sets and are only for
 convienence.
 
@@ -634,7 +638,7 @@ The resulting charset will always be of order 1, type 1.
 C<start> contains an array reference to all valid starting
 characters, e.g. no valid string can start with a character not listed here.
 
-The same can be acomplished by specifying C<sets->{1}>.
+The same can be acomplished by specifying C<< sets->{1} >>.
 
 =item sets
 
@@ -645,7 +649,7 @@ Math::String::Charset of order 1, type 0.
 Positive indices (greater than one) count from the left side, negative from
 the right. 0 denotes the default charset to be used for unspecified places.
 
-The index count will be used for all string length, so that C<sets->{2}> always
+The index count will be used for all string length, so that C<< sets->{2} >> always
 refers to the second character from the left, no matter how many characters
 the string actually has.
 
@@ -695,7 +699,7 @@ characters, e.g. no valid string can end with a character not listed here.
 Note that strings of length 1 start B<and> end with their only
 character, so the character must be listed in C<end> and C<start> to produce
 a string with one character.
-The same can be acomplished by specifying C<sets->{-1}>.
+The same can be acomplished by specifying C<< sets->{-1} >>.
 
 =item minlen
 
@@ -712,27 +716,27 @@ Must be longer than a (possible defined) minlen. If not given is set to +inf.
 
 =back
 
-=head2 B<minlen()>
+=item minlen()
 
 	$charset->minlen();
 
 Return minimum string length.
 
-=head2 B<maxlen()>
+=item maxlen()
 
 	$charset->maxlen();
 
 Return maximum string length.
 
-=head2 B<length()>
+=item length()
 
 	$charset->length();
 
 Return the number of items in the charset, for higher order charsets the
-number of valid 1-character long strings. Shortcut for 
+number of valid 1-character long strings. Shortcut for
 C<< $charset->class(1) >>.
-  
-=head2 B<count()>
+
+=item count()
 
 Returns the count of all possible strings described by the charset as a
 positive BigInt. Returns 'inf' if no maxlen is defined, because there should
@@ -742,7 +746,7 @@ If maxlen is defined, forces a calculation of all possible L<class()> values
 and may therefore be very slow on the first call, it also caches possible
 lot's of values if maxlen is very high.
 
-=head2 B<class()>
+=item class()
 
 	$charset->class($order);
 
@@ -750,7 +754,7 @@ Return the number of items in a class.
 
 	print $charset->class(5);	# how many strings with length 5?
 
-=head2 B<char()>
+=item char()
 
 	$charset->char($nr);
 
@@ -760,7 +764,7 @@ Returns the character number $nr from the set, or undef.
 	print $charset->char(1);	# second char
 	print $charset->char(-1);	# last one
 
-=head2 B<lowest()>
+=item lowest()
 
 	$charset->lowest($length);
 
@@ -770,7 +774,7 @@ to (but much faster):
 	$str = $charset->first($length);
 	$number = $charset->str2num($str);
 
-=head2 B<highest()>
+=item highest()
 
 	$charset->highest($length);
 
@@ -781,35 +785,35 @@ to (but much faster):
 	$number = $charset->str2num($str);
         $number--;
 
-=head2 B<order()>
+=item order()
 
 	$order = $charset->order();
 
 Return the order of the charset: is always 1 for grouped charsets.
 See also L<type>.
 
-=head2 B<type()>
+=item type()
 
 	$type = $charset->type();
 
-Return the type of the charset: is always 1 for grouped charsets. 
+Return the type of the charset: is always 1 for grouped charsets.
 See also L<order>.
 
-=head2 B<charlen()>
+=item charlen()
 
 	$character_length = $charset->charlen();
 
 Return the length of one character in the set. 1 or greater. All charsets
-used in a grouped charset must have the same length, unless you specify a 
+used in a grouped charset must have the same length, unless you specify a
 seperator char.
 
-=head2 B<seperator()>
+=item seperator()
 
 	$sep = $charset->seperator();
 
 Returns the separator string, or undefined if none is used.
 
-=head2 B<chars()>
+=item chars()
 
 	$chars = $charset->chars( $bigint );
 
@@ -821,35 +825,35 @@ This is much faster than doing
 
 since it does not need to actually construct the string.
 
-=head2 B<first()>
+=item first()
 
 	$charset->first( $length );
 
 Return the first string with a length of $length, according to the charset.
 See C<lowest()> for the corrospending number.
 
-=head2 B<last()>
+=item last()
 
 	$charset->last( $length );
 
 Return the last string with a length of $length, according to the charset.
 See C<highest()> for the corrospending number.
 
-=head2 B<is_valid()>
+=item is_valid()
 
 	$charset->is_valid();
 
 Check wether a string conforms to the charset set or not.
 
-=head2 B<error()>
+=item error()
 
 	$charset->error();
 
-Returns "" for no error or an error message that occured if construction of 
+Returns "" for no error or an error message that occured if construction of
 the charset failed. Set C<$Math::String::Charset::die_on_error> to C<0> to
 get the error message, otherwise the program will die.
 
-=head2 B<start()>
+=item start()
 
 	$charset->start();
 
@@ -859,17 +863,17 @@ In scalar context returns the lenght of the B<start> set.
 
 Think of the start set as the set of all characters that can start a string
 with one or more characters. The set for one character strings is called
-B<ones> and you can access if via C<$charset->ones()>.
+B<ones> and you can access if via C<< $charset->ones() >>.
 
-=head2 B<end()>
+=item end()
 
 	$charset->end();
 
 In list context, returns a list of all characters in the end set, aka all
-characters a string can end with. 
+characters a string can end with.
 In scalar context returns the lenght of the B<end> set.
 
-=head2 B<ones()>
+=item ones()
 
 	$charset->ones();
 
@@ -883,7 +887,7 @@ character at the same time.
 
 The order of the chars in C<ones> is the same ordering as in C<start>.
 
-=head2 B<prev()>
+=item prev()
 
 	$string = Math::String->new( );
 	$charset->prev($string);
@@ -893,7 +897,7 @@ This is faster than decrementing the number of the string and converting the
 new number to a string. This routine is mainly used internally by Math::String
 and updates the cache of the given Math::String.
 
-=head2 B<next()>
+=item next()
 
 	$string = Math::String->new( );
 	$charset->next($string);
@@ -902,6 +906,8 @@ Give the charset and a string, calculates the next string in the sequence.
 This is faster than incrementing the number of the string and converting the
 new number to a string. This routine is mainly used internally by Math::String
 and updates the cache of the given Math::String.
+
+=back
 
 =head1 EXAMPLES
 
@@ -921,4 +927,3 @@ to hear about how my code helps you ;)
 This module is (C) Copyright by Tels http://bloodgate.com 2000-2003.
 
 =cut
-

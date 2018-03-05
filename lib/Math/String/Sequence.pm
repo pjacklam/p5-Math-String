@@ -13,7 +13,7 @@
 
 package Math::String::Sequence;
 use vars qw($VERSION);
-$VERSION = '1.06';	# Current version of this package
+$VERSION = '1.29';	# Current version of this package
 require  5.005;		# requires this Perl version or later
 
 use Exporter;
@@ -66,7 +66,7 @@ sub new
       {
       $self->{$_} = Math::String->new($args->{$_});
       }
-    return $self; 
+    return $self;
     }
   my $first = $args->{first};
   my $last = $args->{last};
@@ -74,21 +74,21 @@ sub new
 
   $first = Math::String->new($first,$set) unless ref $first;
   $last = Math::String->new($last,$set) unless ref $last;
- 
+
   die ("first is NaN") if $first->is_nan();
   die ("last is NaN") if $last->is_nan();
-  #die ("$first is not smaller than $last") if 
-  # adjustment by $self->_size(): $self->{_rev} = $first > $last ? 1 : 0; 
+  #die ("$first is not smaller than $last") if
+  # adjustment by $self->_size(): $self->{_rev} = $first > $last ? 1 : 0;
 
   bless $self, $class;
   $self->{_first} = $first;
   $self->{_last} = $last;
   $self->_initialize();
-  $self; 
+  $self;
   }
 
 #############################################################################
-# private, initialize self 
+# private, initialize self
 
 sub _initialize
   {
@@ -105,7 +105,7 @@ sub _size
   # calculate new size and adjust _rev
   my $self = shift;
 
-  $self->{_rev} = $self->{_first} < $self->{_last} ? 0 : 1; 
+  $self->{_rev} = $self->{_first} < $self->{_last} ? 0 : 1;
   $self->{_size} = $self->{_last} - $self->{_first};
   $self->{_size} = $self->{_size}->babs()->as_number();
   $self->{_size}++;
@@ -177,7 +177,7 @@ sub string
     else
       {
       $n = $self->{_first}-$nr;
-      } 
+      }
     return if $n > $self->{_first} || $n < $self->{_last};
     }
   else
@@ -189,11 +189,11 @@ sub string
     else
       {
       $n = $self->{_first}+$nr;
-      } 
+      }
     return if $n > $self->{_last} || $n < $self->{_first};
     }
   $n;
-  } 
+  }
 
 sub error
   {
@@ -223,6 +223,8 @@ __END__
 
 #############################################################################
 
+=pod
+
 =head1 NAME
 
 Math::String::Sequence - defines a sequence (range) of Math::String(s)
@@ -234,20 +236,20 @@ Math::String::Sequence - defines a sequence (range) of Math::String(s)
 
 	$seq = Math::String::Sequence->new( a, zzz );		   # set a-z
 	$seq = Math::String::Sequence->new( a, zzz, ['z'..'a'] );  # set z..a
-	$seq = Math::String::Sequence->new( 
-          { first => 'a', last => 'zzz', charset => ['z'..'a'] 
+	$seq = Math::String::Sequence->new(
+          { first => 'a', last => 'zzz', charset => ['z'..'a']
           } ); 							   # same
         $x = Math::String->new('a');
         $y = Math::String->new('zz');
-	$seq = Math::String::Sequence->new( { 
+	$seq = Math::String::Sequence->new( {
           first => $x, last => $y, } );  			   # same
 
 	print "length: ",$seq->length(),"\n";
 	print "first: ",$seq->first(),"\n";
 	print "last: ",$seq->last(),"\n";
-	print "5th: ",$seq->string(5),"\n"; 	
-	print "out-of-range: ",$seq->string(10000000),"\n"; 	   # undef	
-	
+	print "5th: ",$seq->string(5),"\n";
+	print "out-of-range: ",$seq->string(10000000),"\n"; 	   # undef
+
 	print "as array:: ",$seq->as_array(),"\n"; 	   	   # as array
 
 =head1 REQUIRES
@@ -277,55 +279,57 @@ not an Math::String, they will get the given charset or this default.
 
 =head1 USEFULL METHODS
 
-=head2 B<new()>
+=over
+
+=item new()
 
             new();
 
-Create a new Math::String::Sequence object. Arguments are the 
+Create a new Math::String::Sequence object. Arguments are the
 first and last string, and optional charset. You can give a hash ref, that must
 then contain the keys C<first>, C<last> and C<charset>.
 
-=head2 B<length()>
+=item length()
 
             $sequence->length();
 
 Returns the amount of strings this sequence contains, aka (last-first)+1.
 
-=head2 B<is_reversed()>
+=item is_reversed()
 
             $sequence->is_reversed();
 
 Returns true or false, depending wether the first string in the sequence
 is smaller than the last.
 
-=head2 B<first()>
+=item first()
 
             $sequence->first($length);
 
 Return the first string in the sequence. The optional argument becomes the
 new first string.
 
-=head2 B<last()>
+=item last()
 
             $sequence->last($length);
 
 Return the last string in the sequence. The optional argument becomes the
 new last string.
 
-=head2 B<charset()>
+=item charset()
 
             $sequence->charset();
 
 Return a reference to the charset of the Math::String::Sequence object.
 
-=head2 B<string()>
+=item string()
 
             $sequence->string($n);
 
 Returns the Nth string in the sequence, 0 beeing the C<first>. Negative
 arguments count backward from C<last>, just like with arrays.
 
-=head2 B<as_array()>
+=item as_array()
 
             @array = $sequence->as_array();
 
@@ -347,6 +351,8 @@ via
 
 Beware, might create HUGE arrays!
 
+=back
+
 =head1 BUGS
 
 None discovered yet.
@@ -364,4 +370,3 @@ to hear about how my code helps you ;)
 This module is (C) Tels http://bloodgate.com 2001 - 2005.
 
 =cut
-
