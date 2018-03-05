@@ -3,8 +3,8 @@
 use strict;
 use Test;
 
-BEGIN 
-  { 
+BEGIN
+  {
   $| = 1;
   chdir 't' if -d 't';
   unshift @INC, '../lib'; # to run manually
@@ -73,4 +73,3 @@ ok ($a[1],'ab');
 
 # test error()
 ok ($seq->error(),'');
-

@@ -11,7 +11,7 @@
 
 # the following hash values are used
 # _set			  : ref to charset object
-# sign, value, _a, _f, _p : from BigInt 
+# sign, value, _a, _f, _p : from BigInt
 # _cache		  : caches string form for speed
 
 package Math::String;
@@ -26,7 +26,7 @@ use Math::BigInt;
 use Math::String::Charset;
 use strict;
 use vars qw($VERSION $AUTOLOAD $accuracy $precision $div_scale $round_mode);
-$VERSION = '1.28';	# Current version of this package
+$VERSION = '1.29';	# Current version of this package
 require 5.008003;	# requires this Perl version or later
 
 $accuracy   = undef;
@@ -35,17 +35,17 @@ $div_scale  = 0;
 $round_mode = 'even';
 
 use overload
-'cmp'   =>      sub { 
+'cmp'   =>      sub {
  		 my $str = $_[0]->bstr();
- 		 return undef if !defined $str; 
+ 		 return undef if !defined $str;
  		 my $str1 = $_[1]; $str1 = $str1->bstr() if ref $str1;
- 		 return undef if !defined $str1; 
+ 		 return undef if !defined $str1;
 	        $_[2] ?  $str1 cmp $str : $str cmp $str1;
 	        },
 # can modify arg of ++ and --, so avoid a new-copy for speed
-'++'    =>      \&binc, 
-'--'    =>      \&bdec, 
-;         
+'++'    =>      \&binc,
+'--'    =>      \&bdec,
+;
 
 my $CALC = 'Math::BigInt::Calc';
 
@@ -60,7 +60,7 @@ sub import
 
   Math::BigInt::import($self, @_);
   }
- 
+
 sub string
   {
   # exportable version of new
@@ -72,7 +72,7 @@ sub from_number
   # turn an integer into a string object
   # catches also Math::String->from_number and make it work
   my $val = shift;
-  
+
   $val = "" if !defined $val;
   $val = shift if !ref($val) && $val eq $class;
   my $set = shift;
@@ -87,7 +87,7 @@ sub from_number
     }
   bless $self, $class;         					# rebless
   $self->_set_charset($set);
-  $self; 
+  $self;
   }
 
 sub scale
@@ -105,7 +105,7 @@ sub bzero
     {
     # $x->bzero();	(x) (M::S)
     # $x->bzero();	(x) (M::bi or something)
-    $self->SUPER::bzero();
+    $self = $self->SUPER::bzero();
     bless $self, $class if ref($self) ne $class;	# convert aka rebless
     }
   else
@@ -216,7 +216,7 @@ sub new
     $self->_set_charset(shift);			# if given charset, copy over
     $self->_initialize($value);
     }
-  $self; 
+  $self;
   }
 
 sub _set_charset
@@ -234,7 +234,7 @@ sub _set_charset
   }
 
 #############################################################################
-# private, initialize self 
+# private, initialize self
 
 sub _initialize
   {
@@ -245,7 +245,7 @@ sub _initialize
   my $cs = $self->{_set};
 
   return $self->bnan() if !$cs->is_valid($value);
- 
+
   my $int = $cs->str2num($value);
   if (!ref($int))
     {
@@ -253,7 +253,7 @@ sub _initialize
     Carp::croak ("$int is not a reference to a Big* object");
     }
   foreach my $c (keys %$int) { $self->{$c} = $int->{$c}; }
-  
+
   $self->{_cache} = $cs->norm($value);		# caching normalized form
   $self;
   }
@@ -273,7 +273,7 @@ sub copy
     $c = ref($x);
     }
   return unless ref($x); # only for objects
- 
+
   my $self = {}; bless $self,$c;
   foreach my $k (keys %$x)
     {
@@ -361,7 +361,7 @@ sub bstr
 
   return $x->{_cache} if defined $x->{_cache};
 
-  # num2str needs (due to overloading "$x-1") a Math::BigInt object, so make it 
+  # num2str needs (due to overloading "$x-1") a Math::BigInt object, so make it
   # positively happy
   my $int = Math::BigInt->bzero();
   $int->{value} = $x->{value};
@@ -377,7 +377,7 @@ sub as_number
 
   # make a copy of us and delete any specific (non-MBI) keys
   my $x = $self->copy();
-  delete $x->{_cache}; 
+  delete $x->{_cache};
   delete $x->{_set};
   bless $x, 'Math::BigInt';	# convert it to the new religion
   $x->bmul($self->{_set}->{_scale})
@@ -451,20 +451,20 @@ sub is_valid
 
 sub binc
   {
-  my ($self,$x,$a,$p,$r) = ref($_[0]) ? 
+  my ($self,$x,$a,$p,$r) = ref($_[0]) ?
    (ref($_[0]),@_) : (Math::BigInt::objectify(1,@_));
-  
+
   # binc calls modify, and thus destroys the cache, so store it
   my $str = $x->{_cache};
   $x->SUPER::binc();
 
   # if old value cached and no rounding happens
- if ((defined $str) 
-#   && (!defined $a) && (!defined $p) 
+ if ((defined $str)
+#   && (!defined $a) && (!defined $p)
 #   && (!defined $x->accuracy()) && (!defined $x->precision())
    )
     {
-    $x->{_cache} = $str;		# restore cache	
+    $x->{_cache} = $str;		# restore cache
     $x->{_set}->next($x);		# update string cache
     }
   $x;
@@ -472,20 +472,20 @@ sub binc
 
 sub bdec
   {
-  my ($self,$x,$a,$p,$r) = ref($_[0]) ? 
+  my ($self,$x,$a,$p,$r) = ref($_[0]) ?
    (ref($_[0]),@_) : (Math::BigInt::objectify(1,@_));
- 
+
   # bdec calls modify, and thus destroys the cache, so store it
   my $str = $x->{_cache};
   $x->SUPER::bdec();
 
   # if old value cached and no rounding happens
-  if ((defined $str) 
-#   && (!defined $a) && (!defined $p) 
+  if ((defined $str)
+#   && (!defined $a) && (!defined $p)
  #  && (!defined $x->accuracy()) && (!defined $x->precision())
    )
     {
-    $x->{_cache} = $str;		# restore cache	
+    $x->{_cache} = $str;		# restore cache
     $x->{_set}->prev($x);		# update string cache
     }
   $x;
@@ -504,6 +504,8 @@ __END__
 
 #############################################################################
 
+=pod
+
 =head1 NAME
 
 Math::String - Arbitrary sized integers having arbitrary charsets to calculate with key rooms
@@ -516,17 +518,17 @@ Math::String - Arbitrary sized integers having arbitrary charsets to calculate w
     $a = new Math::String 'cafebabe';  	# default a-z
     $b = new Math::String 'deadbeef';  	# a-z
     print $a + $b;                     	# Math::String ""
-   
+
     $a = new Math::String 'aa';        	# default a-z
-    $b = $a; 
-    $b++; 
+    $b = $a;
+    $b++;
     print "$b > $a" if ($b > $a);      	# prove that ++ makes it greater
-    $b--; 
+    $b--;
     print "$b == $a" if ($b == $a);    	# and that ++ and -- are reverse
 
     $d = Math::String->bzero( ['0'...'9'] );   	# like Math::Bigint
-    $d += Math::String->new ( '9999', [ '0'..'9' ] ); 
-					# Math::String "9999"  
+    $d += Math::String->new ( '9999', [ '0'..'9' ] );
+					# Math::String "9999"
 
     print "$d\n";                      	# string       "00000\n"
     print $d->as_number(),"\n";        	# Math::BigInt "+11111"
@@ -535,7 +537,7 @@ Math::String - Arbitrary sized integers having arbitrary charsets to calculate w
     print $d->length(),"\n";           	# faster than length("$d");
 
     $d = Math::String->new ( '', Math::String::Charset->new ( {
-      minlen => 2, start => [ 'a'..'z' ], } ); 
+      minlen => 2, start => [ 'a'..'z' ], } );
 
     print $d->minlen(),"\n";            # print 2
     print ++$d,"\n";			# print 'aa'
@@ -556,10 +558,10 @@ limited to) as if they were big integers. The strings can have arbitrary
 length and charsets. Please see L<Math::String::Charset> for full documentation
 on possible character sets.
 
-You can thus quickly determine the number of passwords for brute force 
+You can thus quickly determine the number of passwords for brute force
 attacks, divide key spaces etc.
 
-=over 1
+=over
 
 =item Default charset
 
@@ -573,14 +575,14 @@ The default charset is the set containing "abcdefghijklmnopqrstuvwxyz"
 Uses internally Math::BigInt to do the math, all with overloaded operators. For
 the character sets, Math::String::Charset is used.
 
-Actually, the 'numbers' created by this module are NOT equal to plain 
+Actually, the 'numbers' created by this module are NOT equal to plain
 numbers.  It works more than a counting sequence. Oh, well, example coming:
 
 Imagine a charset from a-z (26 letters). The number 0 is defined as '', the
 number one is therefore 'a' and two becomes 'b' and so on. And when you reach
-'z' and increment it, you will get 'aa'. 'ab' is next and so on forever. 
+'z' and increment it, you will get 'aa'. 'ab' is next and so on forever.
 
-That works a little bit like the automagic in ++, but more consistent and 
+That works a little bit like the automagic in ++, but more consistent and
 flexible. The following example 'breaks' (no, >= instead of gt won't help ;)
 
 	$a = 'z'; $b = $a; $a++; print ($a gt $b ? 'greater' : 'lower');
@@ -593,7 +595,7 @@ expected them to work on big integers.
 
 Compare a Math::String of charset '0-9' sequence to that of a 'normal' number:
 
-    ''   0                       0            
+    ''   0                       0
     '0'  1                       1
     '1'  2                       2
     '2'  3                       3
@@ -602,8 +604,8 @@ Compare a Math::String of charset '0-9' sequence to that of a 'normal' number:
     '5'  6                       6
     '6'  7                       7
     '7'  8                       8
-    '8'  9                       9 
-    '9'  10                     10 
+    '8'  9                       9
+    '9'  10                     10
    '00'  11                1*10+ 1
    '01'  12                1*10+ 2
        ...
@@ -625,7 +627,7 @@ having 4 digits in each place (named "a","b","c", and "d"):
      d    4           4
     aa    5       1*4+1
     ab    6       1*4+2
-    ac    7       1*4+3    
+    ac    7       1*4+3
     ad    8       1*4+4
     ba    9       2*4+1
     bb   10       2*4+2
@@ -638,7 +640,7 @@ having 4 digits in each place (named "a","b","c", and "d"):
     da   17       4*4+1
     db   18       4*4+2
     dc   19       4*4+3
-    dd   20       4*4+4 
+    dd   20       4*4+4
    aaa   21  1*16+1*4+1
 
 Here is one with a charset containing 'characters' longer than one, namely
@@ -660,9 +662,9 @@ the words 'foo', 'bar' and 'fud':
 
 The number sequences are symmetrical to 0, e.g. 'a' is both 1 and -1.
 Internally the sign is stored and honoured, only on conversation to string it
-is lost. 
+is lost.
 
-The caveat is that you can NOT use Math::String to work, let's say with 
+The caveat is that you can NOT use Math::String to work, let's say with
 hexadecimal numbers. If you do calculate with Math::String like you would
 with 'normal' hexadecimal numbers (any base would or rather, would not do),
 the result may not mean anything and can not nesseccarily compared to plain
@@ -670,19 +672,21 @@ hexadecimal math.
 
 The charset given upon creation need not be a 'simple' set consisting of all
 the letters. You can, actually, give a set consisting of bi-, tri- or higher
-grams. 
+grams.
 
 See Math::String::Charset for examples of higher order charsets and charsets
 with more than one character per, well, character.
 
-=head1 USEFULL METHODS
+=head1 USEFUL METHODS
 
-=head2 B<new()>
+=over
+
+=item new()
 
 	Math::String->new();
 
 Create a new Math::String object. Arguments are the value, and optional
-charset. The charset is set to 'a'..'z' as default. 
+charset. The charset is set to 'a'..'z' as default.
 
 Since the charset caches some things, it is much better to give an already
 existing Math::String::Charset object to the contructor, instead of creating
@@ -690,65 +694,65 @@ a new one for each Math::String. This will save you memory and computing power.
 See http://bloodgate.com/perl/benchmarks.html for details, and
 L<Math::String::Charset> for how to construct charsets.
 
-=head2 B<error()>
+=item error()
 
 	$string->error();
 
 Return the last error message or ''. The error message stems primarily from the
 underlying charset, and is created when you create an illegal charset.
 
-=head2 B<order()>
+=item order()
 
 	$string->order();
 
-Return the order of the string derived from the underlying charset. 
+Return the order of the string derived from the underlying charset.
 1 for SIMPLE (or order 1), 2 for bi-grams etc.
 
-=head2 B<type()>
+=item type()
 
 	$string->type();
 
-Return the type of the string derived from the underlying charset. 
+Return the type of the string derived from the underlying charset.
 0 for simple and nested charsets, 1 for grouped ones.
 
-=head2 B<first()>
+=item first()
 
 	$string->first($length);
 
 It is a bit tricky to get the first string of a certain length, because you
 need to consider the charsets at each digit. This method sets the given
-Math::String object to the first possible string of the given length. 
+Math::String object to the first possible string of the given length.
 The length defaults to 1.
 
-=head2 B<last()>
+=item last()
 
 	$string->last($length);
 
 It is a bit tricky to get the last string of a certain length, because you
 need to consider the charsets at each digit. This method sets the given
-Math::String object to the last possible string of the given length. 
+Math::String object to the last possible string of the given length.
 The length defaults to 1.
 
-=head2 B<as_number()>
+=item as_number()
 
 	$string->as_number();
 
-Return internal number as normalized string including sign. 
+Return internal number as normalized string including sign.
 
-=head2 B<from_number()>
+=item from_number()
 
 	$string = Math::String::from_number(1234,$charset);
 
 Create a Math::String from a given integer value and a charset.
 
 If you want to use big integers as input, quote them:
-	
+
 	$string = Math::String::from_number('12345678901234567890',$set);
 
 This avoids loosing precision due to intermidiate storage of the number as
 Perl scalar.
 
-=head2 B<scale()>
+=item scale()
 
 	$scale = $string->scale();
 	$string->scale(120);
@@ -773,8 +777,8 @@ rounding down to the nearest integer. So:
 	$string->scale(3);
 	print $string->as_number();			# 3
 	$string = Math::String->from_number(9,3);	# 9/3 => 3
- 
-=head2 B<bzero()>
+
+=item bzero()
 
 	$string = Math::String->bzero($charset);
 
@@ -784,7 +788,7 @@ The following would set $x to '':
         $x = Math::String->new('cafebabe');
 	$x->bzero();
 
-=head2 B<bone()>
+=item bone()
 
 	$string = Math::String->bone($charset);
 
@@ -795,7 +799,7 @@ The following would set $x to the number 1 (and it's respective string):
         $x = Math::String->new('cafebabe');
 	$x->bone();
 
-=head2 B<binf()>
+=item binf()
 
 	$string = Math::String->binf($sign);
 
@@ -806,7 +810,7 @@ The following would set $x to -infinity (and it's respective string):
         $x = Math::String->new('deadbeef');
 	$x->binf('-');
 
-=head2 B<bnan()>
+=item bnan()
 
 	$string = Math::String->bnan();
 
@@ -817,7 +821,7 @@ The following would set $x to NaN (and it's respective string):
         $x = Math::String->new('deadbeef');
 	$x->bnan();
 
-=head2 B<is_valid()>
+=item is_valid()
 
 	print $string->error(),"\n" if !$string->is_valid();
 
@@ -825,16 +829,16 @@ Returns 0 if the string is valid (according to it's charset and string
 representation) and the cached string value matches the string's internal
 number represantation. Costly operation, but usefull for tests.
 
-=head2 B<class()>
+=item class()
 
 	$count = $string->class($length);
 
 Returns the number of possible strings with the given length, aka so many
 characters (not bytes or chars!).
-	
+
 	$count = $string->class(3);	# how many strings with len 3
 
-=head2 B<minlen()>
+=item minlen()
 
 	$string->minlen();
 
@@ -844,7 +848,7 @@ is greater than 0.
 Returns 0 if no minimum length is required. The minimum length must be smaller
 or equal to the C<maxlen>.
 
-=head2 B<maxlen()>
+=item maxlen()
 
 	$string->maxlen();
 
@@ -852,7 +856,7 @@ Return the maximum length of a valid string as defined by it's charset.
 Returns 0 if no maximum length is required. The maximum length must be greater
 or equal to the C<minlen>.
 
-=head2 B<length()>
+=item length()
 
 	$string->length();
 
@@ -869,31 +873,33 @@ by the character length to find out how many bytes the string would have.
 
 This is nearly impossible if your character set has characters with different
 lengths (aka if it has a separator character). In this case you need to
-construct the string to find out the actual length in bytes. 
+construct the string to find out the actual length in bytes.
 
-=head2 B<bstr()>
+=item bstr()
 
 	$string->bstr();
 
 Return a string representing the internal number with the given charset.
-Since this omitts the sign, you can not distinguish between negative and 
+Since this omitts the sign, you can not distinguish between negative and
 positiv values. Use C<as_number()> or C<sign()> if you need the sign.
 
 This returns undef for 'NaN', since with a charset of
 [ 'a', 'N' ] you would not be able to tell 'NaN' from true 'NaN'!
 '+inf' or '-inf' return undef for the same reason.
 
-=head2 B<charset()>
+=item charset()
 
 	$string->charset();
 
 Return a reference to the charset of the Math::String object.
 
-=head2 B<string()>
+=item string()
 
 	Math::String->string();
 
 Just like new, but you can import it to save typing.
+
+=back
 
 =head1 LIMITS
 
@@ -904,7 +910,7 @@ them, of course.
 
 Also, the limits detailed in L<Math::String::Charset> apply, like:
 
-=over 1
+=over
 
 =item No doubles
 
@@ -918,8 +924,8 @@ string:
 
 	use Math::String;
 
-	$b = Math::String->new( '', 
-           { start => [ qw/ the green car a/ ], sep => ' ', }  
+	$b = Math::String->new( '',
+           { start => [ qw/ the green car a/ ], sep => ' ', }
 	   );
 
 	while ($b ne 'the green car')
@@ -934,7 +940,7 @@ Writing things like
         $a = Math::String::bsub('hal', 'aaa');
 
 does not work, unlike with Math::BigInt (which just knows how to treat
-the arguments to become BigInts). The first argument must be a 
+the arguments to become BigInts). The first argument must be a
 reference to a Math::String object.
 
 The following two lines do what you want and are more or less (except output)
@@ -967,9 +973,9 @@ Fun with Math::String:
 	$vms = new Math::String ('vms');
 	$ibm -= 'aaa';
 	$vms += 'aaa';
-	print "ibm is now $ibm\n";   
-	print "vms is now $vms\n";   
-	
+	print "ibm is now $ibm\n";
+	print "vms is now $vms\n";
+
 Some more serious examples:
 
         use Math::String;
@@ -1015,12 +1021,12 @@ Some more serious examples:
         # You want your computer to run for one hour and see if the password
         # is to be found. What would be the last password to be tested?
         $c = $b + (Math::BigInt->new('100000') * 3600);
-        print "Last tested would be: $c\n";    
-        
+        print "Last tested would be: $c\n";
+
         # You want to know what the 10.000th try would be
         $c = Math::String->from_number(10000,
          ['a'..'z','A'..'Z','0'..'9','.',',',':',';']);
-	print "Try #10000 would be: $c\n";    
+	print "Try #10000 would be: $c\n";
 
 =head1 PERFORMANCE
 
@@ -1028,7 +1034,7 @@ For simple things, like generating all passwords from 'a' to 'zzz', this
 is expensive and slow. A custom, table-driven generator or the build-in
 automagic of ++ (if it would work correctly for all cases, that is ;) would
 beat it anytime. But if you want to do more than just counting, then this
-code is what you want to use. 
+code is what you want to use.
 
 =head2 BENCHMARKS
 
@@ -1036,7 +1042,7 @@ See http://bloodgate.com/perl/benchmarks.html
 
 =head1 BUGS
 
-=over 2
+=over
 
 =item *
 
@@ -1061,7 +1067,47 @@ usefull is questionable:
 	$y = $z + $a;					# is 2, with set z..a
 
 If you convert $z to $a's charset, you would get either an 1 ('a'),
-or a 26 ('z'), and which one is the right one is unclear.  
+or a 26 ('z'), and which one is the right one is unclear.
+
+=item *
+
+Please report any bugs or feature requests to
+C<bug-math-string at rt.cpan.org>, or through the web interface at
+L<https://rt.cpan.org/Ticket/Create.html?Queue=Math-String> (requires login).
+We will be notified, and then you'll automatically be notified of progress on
+your bug as I make changes.
+
+=back
+
+=head1 SUPPORT
+
+You can find documentation for this module with the perldoc command.
+
+    perldoc Math::String
+
+You can also look for information at:
+
+=over 4
+
+=item * RT: CPAN's request tracker
+
+L<https://rt.cpan.org/Dist/Display.html?Name=Math-String>
+
+=item * AnnoCPAN: Annotated CPAN documentation
+
+L<http://annocpan.org/dist/Math-String>
+
+=item * CPAN Ratings
+
+L<http://cpanratings.perl.org/dist/Math-String>
+
+=item * Search CPAN
+
+L<http://search.cpan.org/dist/Math-String/>
+
+=item * CPAN Testers Matrix
+
+L<http://matrix.cpantesters.org/?dist=Math-String>
 
 =back
 

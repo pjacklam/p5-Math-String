@@ -87,5 +87,3 @@ sub ok_undef
   ok (1,1) and return if !defined $x;
   ok ($x,'undef');
   }
-
-

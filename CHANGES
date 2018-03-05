@@ -1,13 +1,43 @@
+2017-02-01 1.29 pjacklam
+
+ * Fix case in Math::String when bzero() is called as a class method.
+
+ * Required version of Math::BigInt is now 1.999802 (was 1.87).
+
+ * Remove Math::BigFloat from requirements in Makefile.PL, since it is bundled
+   together with Math::BigInt.
+
+ * Trim whitespace.
+
+ * POD nits (CPAN RT #51833).
+
+ * Fix hash randomization issues (CPAN RT #95621).
+
+ * POD formatting and typos.
+
+ * The NEW file now refers to the CHANGES file.
+
+ * Revert to ExtUtils::MakeMaker since use Module::Install is discouraged.
+   Change license from "gpl" to "gpl_3", since "gpl" is not a valid option for
+   the license.
+
+ * Switch from Test to Test::More in t/stringpm.t for better testing
+   functionality and easier debugging.
+
+ * Fix flawed tests.
 
 2008-04-03 1.28 Tels 662 tests
-  * do not use "lib => GMP", instead let the user decide which lib we take
-  * bundle Module::Install and amend Makefile.PL
-  * require Math::BigInt v1.87
+
+ * do not use "lib => GMP", instead let the user decide which lib we take
+
+ * bundle Module::Install and amend Makefile.PL
+
+ * require Math::BigInt v1.87
 
 Older version history:
 ======================
 
-############################################################################## 
+##############################################################################
 Math::String:
 
 1.02: fixed new() as copy, bstr works now, dropped multiple charsets
@@ -23,16 +53,16 @@ Math::String:
 2001-05-07 1.10: finally got rid of C&P of overload section
 2001-05-13 1.11: added accuracy/precision/fallback/rnd_mode and tests for this
 2001-07-08 1.12: added bnan(), binf(), fixed $x->bzero(), added test for these
-		 fixed bug in copy() code in from_number() 
+		 fixed bug in copy() code in from_number()
 2001-07-26 1.13: new( { str => 'abc', num => '123' } );
 2001-08-08 1.14: bstr() was not caching string form, some more tests
 	         copy() does no longer make a (costly) true copy of the charset
 2001-09-01 1.15: unreleased
 		 binc(), bdec() modify cache for speedup (instead clearing it)
                  added bone(), is_valid(), maxlen(), minlen()
-2001-11-05 1.16: added class() 
+2001-11-05 1.16: added class()
 		 binc(), bdec() modify cache instead of clearing it (speedup)
-		 added bone(), is_valid(), minlen(), maxlen(), type(), class() 
+		 added bone(), is_valid(), minlen(), maxlen(), type(), class()
 2002-02-20 1.17: removed debug output
 		 _core_lib => config()->{lib}
 2002-02-28 1.18: binc()/bdec() four times as fast
@@ -59,7 +89,7 @@ Math::String:
   * avoid caching wrong $CALC - load GMP rightaway
 2005-01-01 1.27 Tels 662 tests
   * use register_callback to get notified by Math::BigInt on lib changes
-############################################################################## 
+##############################################################################
 Math::String::Charset:
 
 2000-02-07 1.02: first version with bi-grams
@@ -100,7 +130,7 @@ Math::String::Charset:
 			 depth as alias for order
 			 can return histogram (hist => 1)
 			 now works for the "hocuspocus" example
-			 tests are now in seperate file 
+			 tests are now in seperate file
 2003-02-06 1.12: added __END__ marker for faster loading
 2003-04-10 1.13: added scale() and scale as parameter to new()
 2003-04-22 1.14: fix for scale not beeing a legal parameter to new()
@@ -121,8 +151,8 @@ Math::String::Charset:
   * streamlined num2str() to make "bstr()" faster
   * remove GMP lib (let caller decide)
 
-   
-############################################################################## 
+
+##############################################################################
 Math::String::Charset::Grouped:
 2000-09-20 0.01: first version from Charset
 2000-10-25 0.02: fixed bugs, added sep char support
@@ -133,7 +163,7 @@ Math::String::Charset::Grouped:
 2004-11-20 0.06: fix dump() for GROUPED charsets
 		 remove GMP lib (let caller decide)
 
-############################################################################## 
+##############################################################################
 Math::String::Charset::Nested:
 2000-09-15 0.01: split from Charset
 		 fixed: bi-gram chars w/o followers can't be in _start
@@ -144,10 +174,10 @@ Math::String::Charset::Nested:
 		 removed shebang line
 2004-11-20 0.05: remove GMP lib (let caller decide)
 
-############################################################################## 
+##############################################################################
 Math::String::Charset::Wordlist was moved into it's own distribution
 
-############################################################################## 
+##############################################################################
 Math::String::Sequence:
 
 2001-03-20 1.00 first version, complete with test and doc
@@ -159,5 +189,3 @@ Math::String::Sequence:
 		removed shebang line
 2004-11-20 0.05: remove GMP lib (let caller decide)
 2005-01-01 0.06: remove a couple of needless return statements
-
-
