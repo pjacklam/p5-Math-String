@@ -26,7 +26,7 @@ use Math::BigInt;
 use Math::String::Charset;
 use strict;
 use vars qw($VERSION $AUTOLOAD $accuracy $precision $div_scale $round_mode);
-$VERSION = '1.29';	# Current version of this package
+$VERSION = '1.30';	# Current version of this package
 require 5.008003;	# requires this Perl version or later
 
 $accuracy   = undef;

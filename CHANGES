@@ -1,3 +1,7 @@
+2018-xx-xx 1.30 pjacklam
+
+ * Increment version number.
+
 2017-02-01 1.29 pjacklam
 
  * Fix case in Math::String when bzero() is called as a class method.
