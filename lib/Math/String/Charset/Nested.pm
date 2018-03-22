@@ -13,7 +13,7 @@ package Math::String::Charset::Nested;
 use base Math::String::Charset;
 
 use vars qw($VERSION);
-$VERSION = '1.29';	# Current version of this package
+$VERSION = '1.30';	# Current version of this package
 require  5.005;		# requires this Perl version or later
 
 use strict;
