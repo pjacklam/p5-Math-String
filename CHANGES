@@ -1,16 +1,12 @@
 1.30 Not Released
 
- * Add test file t/release-test-version.t. Increment version in files that were
-   missed earlier.
+ * Add test files t/release-test-version.t and t/release-portability.t.
 
- * Add test file t/release-portability.t.
-
- * Use the default MANIFEST.SKIP file from ExtUtils::Manifest.
+ * New MANIFEST.SKIP file based on the template in the ExtUtils-Manifest
+   distribution.
 
  * Format CHANGES according to CPAN::Changes::Spec. Add test file
    t/release-cpan-changes.t. Truncate the CHANGES file.
-
- * Increment version number.
 
 1.29 2017-02-01 pjacklam
 
