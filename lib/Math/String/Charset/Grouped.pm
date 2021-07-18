@@ -5,16 +5,18 @@
 #############################################################################
 
 package Math::String::Charset::Grouped;
-use base Math::String::Charset;
 
-use vars qw($VERSION);
-$VERSION = '1.30';	# Current version of this package
-require  5.005;		# requires this Perl version or later
-
+require 5.005;		# requires this Perl version or later
 use strict;
+
+use base 'Math::String::Charset';
+
+our $VERSION;
+$VERSION = '1.30';	# Current version of this package
+
 use Math::BigInt;
 
-use vars qw/$die_on_error/;
+our $die_on_error;
 $die_on_error = 1;              # set to 0 to not die
 
 # following hash values are used:
@@ -253,7 +255,6 @@ sub is_valid
   return 0 if !defined $str;
   return 1 if $str eq '' && $self->{_minlen} <= 0;
 
-  my $int = Math::BigInt->bzero();
   my @chars;
   if (defined $self->{_sep})
     {

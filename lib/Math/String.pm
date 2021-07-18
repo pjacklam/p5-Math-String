@@ -15,24 +15,29 @@
 # _cache		  : caches string form for speed
 
 package Math::String;
-my $class = "Math::String";
+
+require 5.008003;	# requires this Perl version or later
+use strict;
+use warnings;
 
 use Exporter;
 use Math::BigInt;
-@ISA = qw(Exporter Math::BigInt);
-@EXPORT_OK = qw(
-   as_number last first string from_number bzero bone binf bnan
-  );
-use Math::String::Charset;
-use strict;
-use vars qw($VERSION $AUTOLOAD $accuracy $precision $div_scale $round_mode);
-$VERSION = '1.30';	# Current version of this package
-require 5.008003;	# requires this Perl version or later
 
+our ($VERSION, @ISA, @EXPORT_OK);
+$VERSION   = '1.30';	# Current version of this package
+@ISA       = qw(Exporter Math::BigInt);
+@EXPORT_OK = qw( as_number last first string from_number
+                 bzero bone binf bnan );
+
+use Math::String::Charset;
+
+our ($accuracy, $precision, $div_scale, $round_mode);
 $accuracy   = undef;
 $precision  = undef;
 $div_scale  = 0;
 $round_mode = 'even';
+
+my $class = "Math::String";
 
 use overload
 'cmp'   =>      sub {
@@ -448,7 +453,7 @@ sub is_valid
 
 sub binc
   {
-  my ($self,$x,$a,$p,$r) = ref($_[0]) ?
+  my ($self,$x) = ref($_[0]) ?
    (ref($_[0]),@_) : (Math::BigInt::objectify(1,@_));
 
   # binc calls modify, and thus destroys the cache, so store it
@@ -469,7 +474,7 @@ sub binc
 
 sub bdec
   {
-  my ($self,$x,$a,$p,$r) = ref($_[0]) ?
+  my ($self,$x) = ref($_[0]) ?
    (ref($_[0]),@_) : (Math::BigInt::objectify(1,@_));
 
   # bdec calls modify, and thus destroys the cache, so store it
