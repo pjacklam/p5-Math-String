@@ -55,9 +55,6 @@ sub import
 
   $CALC = Math::BigInt->config()->{lib} || 'Math::BigInt::Calc';
 
-  # register us with MBI to get notified of future lib changes
-  Math::BigInt::_register_callback( $self, sub { $CALC = $_[0]; } );
-
   Math::BigInt::import($self, @_);
   }
 
