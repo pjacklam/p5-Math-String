@@ -1,4 +1,7 @@
-#!perl
+# -*- mode: perl -*-
+
+use strict;
+use warnings;
 
 use ExtUtils::MakeMaker;
 

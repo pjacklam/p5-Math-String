@@ -743,7 +743,7 @@ Returns the count of all possible strings described by the charset as a
 positive BigInt. Returns 'inf' if no maxlen is defined, because there should
 be no upper bound on how many strings are possible.
 
-If maxlen is defined, forces a calculation of all possible L<class()> values
+If maxlen is defined, forces a calculation of all possible L</class()> values
 and may therefore be very slow on the first call, it also caches possible
 lot's of values if maxlen is very high.
 
@@ -791,14 +791,14 @@ to (but much faster):
 	$order = $charset->order();
 
 Return the order of the charset: is always 1 for grouped charsets.
-See also L<type>.
+See also L</type()>.
 
 =item type()
 
 	$type = $charset->type();
 
 Return the type of the charset: is always 1 for grouped charsets.
-See also L<order>.
+See also L</order()>.
 
 =item charlen()
 

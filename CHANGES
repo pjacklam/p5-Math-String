@@ -1,12 +1,13 @@
-1.30 Not Released
+1.30 2021-07-18
 
- * Add test files t/release-test-version.t and t/release-portability.t.
+ * Clean up and modernize the code.
+
+ * Reorganize test files and add more test files.
 
  * New MANIFEST.SKIP file based on the template in the ExtUtils-Manifest
    distribution.
 
- * Format CHANGES according to CPAN::Changes::Spec. Add test file
-   t/release-cpan-changes.t. Truncate the CHANGES file.
+ * Format CHANGES according to CPAN::Changes::Spec.
 
 1.29 2017-02-01 pjacklam
 
